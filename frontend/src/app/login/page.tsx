@@ -77,19 +77,11 @@ export default function LoginPage() {
             </span>
           </Link>
           <Link
-            href="/login"
-            className={`no-underline ${pathname === "/login" ? "" : ""}`}
-          >
-            <span className={`inline-block p-[5px_15px] ${pathname === "/login" ? "bg-[rgb(241,163,208)] border-[5px] border-red-600 text-black" : "bg-white text-black"} rounded-[20px] text-[14px] font-bold transition-all duration-200 hover:bg-[rgb(199,150,150)]`}>
-              Login
-            </span>
-          </Link>
-          <Link
             href="/gazette"
             className={`no-underline ${pathname === "/gazette" ? "" : ""}`}
           >
             <span className={`inline-block p-[5px_15px] ${pathname === "/gazette" ? "bg-[rgb(241,163,208)] border-[5px] border-red-600 text-black" : "bg-white text-black"} rounded-[20px] text-[14px] font-bold transition-all duration-200 hover:bg-[rgb(199,150,150)]`}>
-              Gazett
+              Gazette
             </span>
           </Link>
         </div>

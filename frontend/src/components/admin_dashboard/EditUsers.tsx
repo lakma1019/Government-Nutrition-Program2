@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { editUserSchema, type EditUserFormData } from '@/schemas/userForms';
+import { ZodError } from 'zod';
+import { useFetchWithCSRF } from '@/hooks/useFetchWithCSRF';
 
 // Define User type
 interface User {
@@ -22,9 +25,10 @@ export default function EditUsersComponent() {
 
   // State for selected user and edit form
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EditUserFormData>({
     username: '',
     password: '', // Optional for updates
+    confirmPassword: '', // Added for validation
     role: 'admin',
     isActive: 'yes'
   });
@@ -37,6 +41,7 @@ export default function EditUsersComponent() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const { token } = useAuth();
+  const { fetchWithCSRF, loading: csrfLoading, error: csrfError } = useFetchWithCSRF();
 
   // Fetch users on component mount
   useEffect(() => {
@@ -57,20 +62,31 @@ export default function EditUsersComponent() {
     }
   }, [searchQuery, users]);
 
-  // Fetch users from API
+  // Fetch users from API with CSRF protection
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/users', {
+      // If CSRF token is still loading, wait a short time but proceed anyway
+      if (csrfLoading) {
+        console.log('CSRF token is still loading, proceeding with request anyway...');
+      }
+
+      // If there was a CSRF error, log it but proceed with the request
+      if (csrfError) {
+        console.warn('CSRF error detected:', csrfError);
+        setError(`Security warning: ${csrfError}. Attempting to load users anyway.`);
+      }
+
+      const response = await fetchWithCSRF('http://localhost:3001/api/users', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        throw new Error(`Failed to fetch users: ${response.status}`);
       }
 
       const data = await response.json();
@@ -90,8 +106,9 @@ export default function EditUsersComponent() {
     setFormData({
       username: user.username,
       password: '', // Don't pre-fill password
-      role: user.role,
-      isActive: user.is_active
+      confirmPassword: '', // Don't pre-fill confirm password
+      role: user.role as 'admin' | 'deo' | 'vo', // Cast to expected type
+      isActive: user.is_active as 'yes' | 'no' // Cast to expected type
     });
     setFormSuccess(null);
     setFormError(null);
@@ -124,24 +141,60 @@ export default function EditUsersComponent() {
     });
   };
 
-  // Validate form
+  // Validate form using Zod
   const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
+    try {
+      // For edit form, we need to handle the case where password is empty
+      // If password is empty, we don't need to validate it
+      if (!formData.password) {
+        // Create a modified schema that doesn't require password
+        const { password, confirmPassword, ...restData } = formData;
 
-    // Username validation
-    if (!formData.username) {
-      errors.username = 'Username is required';
-    } else if (formData.username.length < 3) {
-      errors.username = 'Username must be at least 3 characters';
+        // Only validate the rest of the data
+        editUserSchema.parse({
+          ...restData,
+          password: '',
+          confirmPassword: ''
+        });
+      } else {
+        // If password is provided, validate the entire form including password match
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error("Passwords don't match");
+        }
+        editUserSchema.parse(formData);
+      }
+
+      setValidationErrors({});
+      return true;
+    } catch (err) {
+      if (err instanceof ZodError) {
+        // Convert Zod errors to our validation error format
+        const errors: Record<string, string> = {};
+        err.errors.forEach((error) => {
+          const path = error.path.join('.');
+          errors[path] = error.message;
+        });
+        setValidationErrors(errors);
+      } else if (err instanceof Error) {
+        // Handle custom errors like password mismatch
+        setValidationErrors({
+          confirmPassword: err.message
+        });
+      } else {
+        console.error('Unexpected validation error:', err);
+      }
+      return false;
     }
+  };
 
-    // Password validation (only if provided)
-    if (formData.password && formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+  // Sanitize input to prevent XSS attacks
+  const sanitizeInput = (input: string): string => {
+    // Basic client-side sanitization
+    return input
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   };
 
   // Handle form submission
@@ -152,7 +205,13 @@ export default function EditUsersComponent() {
     setFormSuccess(null);
     setFormError(null);
 
-    // Validate form
+    // Check if CSRF token is still loading
+    if (csrfLoading) {
+      setFormError('Security token is still loading. Please try again in a moment.');
+      return;
+    }
+
+    // Validate form using Zod
     if (!validateForm() || !selectedUser) {
       return;
     }
@@ -160,43 +219,73 @@ export default function EditUsersComponent() {
     setLoading(true);
 
     try {
-      // Prepare data for API
+      // Prepare data for API with sanitized inputs
       const userData: Record<string, any> = {
-        username: formData.username,
+        username: sanitizeInput(formData.username),
         role: formData.role,
         is_active: formData.isActive
       };
 
-      // Only include password if it's provided
-      if (formData.password) {
-        userData.password = formData.password;
+      // Only include password if it's provided and matches confirmation
+      if (formData.password && formData.password === formData.confirmPassword) {
+        userData.password = formData.password; // Don't sanitize password as it needs to be hashed
+      } else if (formData.password) {
+        console.warn('Password and confirmation do not match');
       }
 
-      // Send PUT request to update user
-      const response = await fetch(`http://localhost:3001/api/users/${selectedUser.id}`, {
+      // Send PUT request to update user with CSRF protection
+      const response = await fetchWithCSRF(`http://localhost:3001/api/users/${selectedUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(userData),
       });
 
+      console.log('Update response status:', response.status);
+
       const data = await response.json();
 
+      console.log('Response data:', data);
+
       if (response.ok) {
-        setFormSuccess('User updated successfully');
+        // Show success message
+        const successMessage = data.message || 'User updated successfully';
+        setFormSuccess(successMessage);
+        console.log(successMessage);
 
         // Refresh the users list
         fetchUsers();
 
-        // Reset form if needed
-        setFormData({
-          ...formData,
-          password: '' // Clear password field
-        });
+        // Reset form
+        if (selectedUser) {
+          // Update the selected user with the new data from the response
+          setSelectedUser({
+            ...selectedUser,
+            username: data.user.username,
+            role: data.user.role,
+            is_active: data.user.is_active
+          });
+
+          // Reset form fields
+          setFormData({
+            username: data.user.username,
+            password: '', // Clear password field
+            confirmPassword: '', // Clear confirm password field
+            role: data.user.role as 'admin' | 'deo' | 'vo',
+            isActive: data.user.is_active as 'yes' | 'no'
+          });
+        }
+
+        // Make sure the success message is visible
+        const successElement = document.getElementById('success-message');
+        if (successElement) {
+          successElement.scrollIntoView({ behavior: 'smooth' });
+        }
       } else {
         setFormError(data.message || 'Failed to update user');
+        console.error('Update failed:', data);
       }
     } catch (err) {
       console.error('Error updating user:', err);
@@ -308,7 +397,7 @@ export default function EditUsersComponent() {
 
               {/* Success Message */}
               {formSuccess && (
-                <div className={alertSuccessClasses}>
+                <div id="success-message" className={alertSuccessClasses}>
                   {formSuccess}
                 </div>
               )}
@@ -356,6 +445,25 @@ export default function EditUsersComponent() {
                   />
                   {validationErrors.password && (
                     <p className={errorClasses}>{validationErrors.password}</p>
+                  )}
+                </div>
+
+                {/* Confirm Password */}
+                <div className={formGroupClasses}>
+                  <label htmlFor="confirmPassword" className={labelClasses}>
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className={inputClasses}
+                    placeholder="Confirm new password"
+                  />
+                  {validationErrors.confirmPassword && (
+                    <p className={errorClasses}>{validationErrors.confirmPassword}</p>
                   )}
                 </div>
 

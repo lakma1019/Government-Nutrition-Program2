@@ -54,6 +54,9 @@ router.get('/:id', auth, admin, async (req, res) => {
 // @access  Private (Admin only)
 router.put('/:id', auth, admin, async (req, res) => {
   try {
+    console.log('User update request received for ID:', req.params.id);
+    console.log('Request body:', JSON.stringify(req.body));
+
     const {
       username,
       password,
@@ -72,8 +75,11 @@ router.put('/:id', auth, admin, async (req, res) => {
     );
 
     if (existingUsers.length === 0) {
+      console.log('User not found with ID:', req.params.id);
       return res.status(404).json({ message: 'User not found' });
     }
+
+    console.log('Existing user found, proceeding with update');
 
     const existingUser = existingUsers[0];
 
@@ -100,8 +106,13 @@ router.put('/:id', auth, admin, async (req, res) => {
     }
 
     if (password) {
+      console.log('Password update requested');
       updateFields.push('password = ?');
-      updateValues.push(await bcrypt.hash(password, 10));
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateValues.push(hashedPassword);
+      console.log('Password hashed successfully');
+    } else {
+      console.log('No password update requested');
     }
 
     if (role) {
@@ -138,8 +149,22 @@ router.put('/:id', auth, admin, async (req, res) => {
     updateQuery += updateFields.join(', ') + ' WHERE id = ?';
     updateValues.push(req.params.id);
 
+    console.log('Update query:', updateQuery);
+    console.log('Update values:', updateValues);
+
+    // Check if there are any fields to update
+    if (updateFields.length === 0) {
+      console.log('No fields to update, returning existing user');
+      const { password: pwd, ...userWithoutPassword } = existingUsers[0];
+      return res.json({
+        message: 'User updated successfully (no changes)',
+        user: userWithoutPassword
+      });
+    }
+
     // Execute update query
-    await pool.query(updateQuery, updateValues);
+    const updateResult = await pool.query(updateQuery, updateValues);
+    console.log('Update result:', JSON.stringify(updateResult));
 
     // Get updated user
     const [updatedUsers] = await pool.query(
@@ -147,8 +172,11 @@ router.put('/:id', auth, admin, async (req, res) => {
       [req.params.id]
     );
 
+    console.log('Updated user retrieved successfully');
+
     // Return user without password
     const { password: pwd, ...userWithoutPassword } = updatedUsers[0];
+    console.log('Sending success response');
     res.json({
       message: 'User updated successfully',
       user: userWithoutPassword

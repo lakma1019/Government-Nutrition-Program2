@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { addUserSchema, type AddUserFormData } from '@/schemas/userForms';
+import { ZodError } from 'zod';
+import { useFetchWithCSRF } from '@/hooks/useFetchWithCSRF';
 
 export default function AddUsersComponent() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { fetchWithCSRF, loading: csrfLoading } = useFetchWithCSRF();
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AddUserFormData>({
     username: '',
     password: '',
     confirmPassword: '',
@@ -46,31 +50,37 @@ export default function AddUsersComponent() {
     });
   };
 
-  // Validate form
+  // Validate form using Zod
   const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    // Username validation
-    if (!formData.username) {
-      errors.username = 'Username is required';
-    } else if (formData.username.length < 3) {
-      errors.username = 'Username must be at least 3 characters';
+    try {
+      // Validate form data against schema
+      addUserSchema.parse(formData);
+      setValidationErrors({});
+      return true;
+    } catch (err) {
+      if (err instanceof ZodError) {
+        // Convert Zod errors to our validation error format
+        const errors: Record<string, string> = {};
+        err.errors.forEach((error) => {
+          const path = error.path.join('.');
+          errors[path] = error.message;
+        });
+        setValidationErrors(errors);
+      } else {
+        console.error('Unexpected validation error:', err);
+      }
+      return false;
     }
+  };
 
-    // Password validation
-    if (!formData.password) {
-      errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-
-    // Confirm password validation
-    if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+  // Sanitize input to prevent XSS attacks
+  const sanitizeInput = (input: string): string => {
+    // Basic client-side sanitization
+    return input
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   };
 
   // Handle form submission
@@ -81,7 +91,13 @@ export default function AddUsersComponent() {
     setError(null);
     setSuccess(false);
 
-    // Validate form
+    // Check if CSRF token is still loading
+    if (csrfLoading) {
+      setError('Security token is still loading. Please try again in a moment.');
+      return;
+    }
+
+    // Validate form using Zod
     if (!validateForm()) {
       return;
     }
@@ -89,16 +105,16 @@ export default function AddUsersComponent() {
     setLoading(true);
 
     try {
-      // Prepare data for API
+      // Prepare data for API with sanitized inputs
       const userData = {
-        username: formData.username,
-        password: formData.password,
+        username: sanitizeInput(formData.username),
+        password: formData.password, // Don't sanitize password as it needs to be hashed
         role: formData.role,
         is_active: formData.isActive === 'yes' ? 'yes' : 'no' // Send as string 'yes' or 'no'
       };
 
-      // Send POST request to the registration API endpoint
-      const response = await fetch('http://localhost:3001/api/auth/register', {
+      // Send POST request to the registration API endpoint with CSRF protection
+      const response = await fetchWithCSRF('http://localhost:3001/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

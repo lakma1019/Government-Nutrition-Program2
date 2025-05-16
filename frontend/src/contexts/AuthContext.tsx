@@ -18,6 +18,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<void>;
+  setUserAndToken: (user: User, token: string) => void;
   logout: () => void;
   clearError: () => void;
 }
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: false,
   error: null,
   login: async () => {},
+  setUserAndToken: () => {},
   logout: () => {},
   clearError: () => {},
 });
@@ -115,6 +117,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Set user and token directly (for use with CSRF protected login)
+  const setUserAndToken = (user: User, token: string) => {
+    // Store user and token
+    setUser(user);
+    setToken(token);
+
+    // Save to localStorage
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('token', token);
+
+    // Redirect based on role
+    if (user.role === 'admin') {
+      router.push('/admin_dashboard');
+    } else if (user.role === 'dataEntryOfficer') {
+      router.push('/deo_dashboard');
+    } else if (user.role === 'verificationOfficer') {
+      router.push('vo_dashboard');
+    }
+  };
+
   // Logout function
   const logout = () => {
     // Clear state
@@ -141,6 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     error,
     login,
+    setUserAndToken,
     logout,
     clearError,
   };

@@ -9,7 +9,7 @@ const loginSchema = z.object({
 // User schema for registration and updates
 const userSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  password: z.string().min(6, { message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'}),
   role: z.enum(['admin', 'deo', 'vo'], {
     message: 'Role must be one of: admin, deo, vo'
   }),

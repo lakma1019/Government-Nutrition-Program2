@@ -1,25 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginFormSchema } from "@/schemas/auth";
-import { z } from "zod";
+import { useFetchWithCSRF } from "@/hooks/useFetchWithCSRF";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [csrfError, setCsrfError] = useState<string | null>(null);
   const pathname = usePathname();
 
   // Use our auth context
-  const { login, isLoading, error, clearError } = useAuth();
+  const { setUserAndToken, isLoading, error, clearError } = useAuth();
+
+  // Use CSRF protection
+  const { fetchWithCSRF, loading: csrfLoading, error: csrfHookError } = useFetchWithCSRF();
+
+  // Update CSRF error when hook error changes
+  useEffect(() => {
+    if (csrfHookError) {
+      setCsrfError(csrfHookError);
+    }
+  }, [csrfHookError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    setCsrfError(null);
+
+    // Check if CSRF token is still loading, but don't block the request
+    if (csrfLoading) {
+      console.log('CSRF token is still loading, proceeding with login anyway...');
+    }
+
+    // If there was a CSRF error, warn but proceed
+    if (csrfHookError) {
+      console.warn('CSRF error detected:', csrfHookError);
+      setCsrfError(`Security warning: ${csrfHookError}. Attempting to log in anyway.`);
+    }
 
     try {
       // Validate form data with Zod
@@ -44,11 +67,27 @@ export default function LoginPage() {
       // Clear validation errors
       setValidationErrors({});
 
-      // Call login from auth context
-      await login(username, password);
+      // Make login request with CSRF protection
+      const response = await fetchWithCSRF('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Store user and token in auth context
+        setUserAndToken(data.user, data.token);
+      } else {
+        clearError();
+        setCsrfError(data.message || 'Login failed');
+      }
     } catch (err) {
       console.error('Login error:', err);
+      setCsrfError('Network error. Please check your connection and try again.');
     }
   };
 
@@ -146,9 +185,9 @@ export default function LoginPage() {
                   </Link>
                 </div>
 
-                {error && (
+                {(error || csrfError) && (
                   <div className="bg-[#ffebee] text-[#d32f2f] p-[10px] rounded-[4px] mb-[15px] border border-[#f5c6cb] text-center">
-                    {error}
+                    {error || csrfError}
                   </div>
                 )}
 

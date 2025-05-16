@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sri Lanka Government Form</title>
+    <style>
+        :root {
+            --primary-text-color: #000000;
+            --border-color: #333333;
+            --background-color: #ffffff;
+            --light-grey-background: #f0f0f0;
+            --form-width: 850px;
+            --spacing-unit: 8px;
+            --font-size-normal: 13px;
+            --font-size-small: 11px;
+            --font-size-xsmall: 9px;
+            --font-size-large: 18px;
+            --font-size-xlarge: 24px;
+
+            --font-family-sinhala: 'Noto Sans Sinhala', 'Iskoola Pota', Arial, sans-serif;
+            --font-family-tamil: 'Noto Sans Tamil', 'Latha', Arial, sans-serif;
+            --font-family-english: Arial, Helvetica, sans-serif;
+            --font-family-brace: 'Times New Roman', Times, serif;
+
+            --line-height-condensed: 1.2;
+            --line-height-normal: 1.5;
+            --line-height-loose: 1.7;
+        }
+
+        body {
+            font-family: var(--font-family-english);
+            font-size: var(--font-size-normal);
+            color: var(--primary-text-color);
+            background-color: #e0e0e0;
+            margin: 0;
+            padding: calc(var(--spacing-unit) * 2);
+            line-height: var(--line-height-normal);
+            display: flex;
+            justify-content: center;
+        }
+
+        .form-container {
+            width: var(--form-width);
+            margin: calc(var(--spacing-unit) * 2) auto;
+            padding: calc(var(--spacing-unit) * 3);
+            border: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sinhala-text {
+            font-family: var(--font-family-sinhala);
+        }
+
+        .tamil-text {
+            font-family: var(--font-family-tamil);
+        }
+
+        .english-text {
+            font-family: var(--font-family-english);
+        }
+
+        /* Header Section */
+        .form-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: calc(var(--spacing-unit) * 1.5);
+        }
+
+        .payment-terms {
+            flex: 2;
+            border: 1px solid var(--border-color);
+            background-color: var(--light-grey-background);
+            padding: var(--spacing-unit);
+            margin-right: calc(var(--spacing-unit) * 2);
+        }
+
+        .payment-terms p {
+            margin: 0 0 calc(var(--spacing-unit) / 4) 0;
+            font-size: var(--font-size-small);
+            line-height: var(--line-height-condensed);
+        }
+
+        .reference-numbers {
+            flex: 1.5;
+            font-size: var(--font-size-small);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .ref-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: calc(var(--spacing-unit) / 2);
+            justify-content: flex-end;
+            width: 100%;
+        }
+
+        .ref-item .ref-labels {
+            text-align: left;
+            margin-right: calc(var(--spacing-unit) / 2);
+            flex-shrink: 0;
+        }
+
+        .ref-item .ref-labels .ref-label {
+            display: block;
+            line-height: var(--line-height-condensed);
+            font-size: var(--font-size-xsmall);
+            white-space: nowrap;
+        }
+
+        .ref-item .ref-brace {
+            font-size: calc(var(--font-size-large) * 1.8);
+            /* Approx 32px */
+            line-height: 0.5;
+            /* Adjusted for better vertical centering with multi-line labels */
+            font-family: var(--font-family-brace);
+            margin-right: calc(var(--spacing-unit) / 2);
+            color: var(--primary-text-color);
+            font-weight: lighter;
+            align-self: center;
+            /* Helps with vertical alignment */
+        }
+
+        .ref-item input.ref-box,
+        .ref-item input.ref-value {
+            font-family: var(--font-family-english);
+            color: var(--primary-text-color);
+            border: 1px solid var(--border-color);
+            background-color: var(--light-grey-background);
+            box-sizing: border-box;
+            padding: calc(var(--spacing-unit) / 4) calc(var(--spacing-unit) / 2);
+            height: 28px;
+            /* Slightly increased for better fit with brace */
+        }
+
+        .ref-item input.ref-box {
+            width: 180px;
+            /* Adjusted width */
+            font-size: var(--font-size-normal);
+            /* Slightly larger font for better readability */
+        }
+
+        .ref-item input.ref-value {
+            font-size: var(--font-size-xlarge);
+            font-weight: bold;
+            min-width: 45px;
+            /* Adjusted min-width */
+            width: auto;
+            /* Allow it to size based on content and min-width */
+            text-align: left;
+            padding-left: calc(var(--spacing-unit));
+            /* Increased padding */
+        }
+
+        .ref-item.general-ref-item input.ref-value {
+            background-color: transparent;
+            /* As per typical "value" display */
+            border: none;
+            padding-left: calc(var(--spacing-unit) / 2);
+        }
+
+
+        .form-main-title-block {
+            margin-bottom: calc(var(--spacing-unit) * 2);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: var(--spacing-unit);
+        }
+
+        .main-title-text {
+            font-weight: bold;
+            font-size: var(--font-size-large);
+        }
+
+        .main-title-text .title-sinhala,
+        .main-title-text .title-tamil,
+        .main-title-text .title-english {
+            margin-right: calc(var(--spacing-unit) /2);
+        }
+
+        /* General Input Line Styling */
+        input.input-line {
+            flex-grow: 1;
+            min-width: 30px;
+            vertical-align: baseline;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            padding: calc(var(--spacing-unit) / 2);
+            /* Unified padding */
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+            box-sizing: border-box;
+            height: calc(var(--font-size-normal) + var(--spacing-unit) + 2px);
+            /* Standard height */
+            line-height: normal;
+        }
+
+        /* Station Details Section */
+        .station-details {
+            margin-bottom: calc(var(--spacing-unit) * 2);
+        }
+
+        .detail-line {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: var(--spacing-unit);
+            font-size: var(--font-size-normal);
+        }
+
+        .detail-line .label {
+            white-space: nowrap;
+            margin-right: var(--spacing-unit);
+            flex-shrink: 0;
+        }
+
+        .detail-line .suffix-text {
+            margin-left: var(--spacing-unit);
+            white-space: nowrap;
+            font-size: var(--font-size-small);
+            flex-shrink: 0;
+        }
+
+        /* Item Details Table */
+        .item-details-table {
+            margin-bottom: calc(var(--spacing-unit) * 2);
+        }
+
+        .item-details-table table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid var(--border-color);
+        }
+
+        .item-details-table th,
+        .item-details-table td {
+            border: 1px solid var(--border-color);
+            padding: calc(var(--spacing-unit) / 1.5);
+            text-align: left;
+            vertical-align: top;
+            font-size: var(--font-size-small);
+        }
+
+        .item-details-table th {
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .item-details-table th span {
+            display: block;
+            line-height: var(--line-height-condensed);
+        }
+
+        .item-details-table .col-date {
+            width: 10%;
+        }
+
+        .item-details-table .col-description {
+            width: 55%;
+        }
+
+        .item-details-table .col-rate {
+            width: 10%;
+            text-align: center;
+        }
+
+        .item-details-table .col-amount {
+            width: 25%;
+        }
+
+        .item-details-table .sub-col-rs,
+        .item-details-table .sub-col-cts {
+            width: 12.5%;
+            text-align: center;
+        }
+
+        .item-details-table tbody td {
+            height: calc(var(--spacing-unit) * 4);
+        }
+
+        .item-details-table .col-description span {
+            text-align: left;
+        }
+
+        .authority-text-cell {
+            padding: var(--spacing-unit);
+            /* Keep cell padding */
+            vertical-align: top;
+            height: auto;
+        }
+
+        .authority-text-cell input.input-line.authority-description-line {
+            width: 100%;
+            /* Fills the padded content area of the cell */
+            margin-bottom: var(--spacing-unit);
+            /* Space before the text block */
+        }
+
+        .authority-text-cell .payment-authority-text-block p {
+            margin: 0 0 calc(var(--spacing-unit) / 2) 0;
+            font-size: var(--font-size-normal);
+            line-height: var(--line-height-condensed);
+        }
+
+        .preparation-cell {
+            padding: var(--spacing-unit);
+            vertical-align: top;
+            height: auto;
+        }
+
+        .preparation-cell .prep-line {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: var(--spacing-unit);
+            font-size: var(--font-size-normal);
+        }
+
+        .preparation-cell .prep-line .label {
+            white-space: nowrap;
+            margin-right: var(--spacing-unit);
+            flex-shrink: 0;
+        }
+
+        .preparation-cell .prep-line input.input-line {
+            min-width: 200px;
+        }
+
+        .preparation-cell .prep-line .annotation {
+            margin-left: var(--spacing-unit);
+            font-size: var(--font-size-xsmall);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .total-label-cell {
+            vertical-align: top;
+            padding: calc(var(--spacing-unit) / 1.5);
+            font-weight: bold;
+            font-size: var(--font-size-small);
+            height: auto;
+        }
+
+        .total-label-cell .label {
+            display: block;
+            line-height: var(--line-height-condensed);
+            text-align: left;
+        }
+
+        .total-value-cell {
+            vertical-align: top;
+            height: auto;
+        }
+
+        .item-details-table td.input-cell {
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .item-details-table td.input-cell input.table-input {
+            width: 100%;
+            height: 100%;
+            /* Fill cell height */
+            min-height: calc(var(--spacing-unit) * 4);
+            /* Ensure minimum height matches default cell height */
+            box-sizing: border-box;
+            border: none;
+            padding: calc(var(--spacing-unit) / 1.5);
+            font-size: var(--font-size-small);
+            font-family: inherit;
+            color: var(--primary-text-color);
+            background-color: var(--background-color);
+            outline: none;
+        }
+
+        /* Certification Section */
+        .certification {
+            margin-bottom: calc(var(--spacing-unit) * 2);
+            font-size: var(--font-size-small);
+            line-height: var(--line-height-loose);
+        }
+
+        .certification p {
+            margin-bottom: var(--spacing-unit);
+        }
+
+        .certification input.input-line {
+            display: inline-block;
+            vertical-align: baseline;
+            margin: 0 calc(var(--spacing-unit) / 4);
+        }
+
+        .certification .rupees-line {
+            width: 200px;
+        }
+
+        .certification .cents-line {
+            width: 100px;
+        }
+
+        /* Signature Section */
+        .signature-section-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: calc(var(--spacing-unit) * 2);
+            font-size: var(--font-size-normal);
+        }
+
+        .signature-section-container .date-line {
+            flex-basis: 30%;
+            display: flex;
+            align-items: baseline;
+            margin-right: calc(var(--spacing-unit) * 2);
+        }
+
+        .signature-section-container .date-line .label {
+            margin-right: var(--spacing-unit);
+            white-space: nowrap;
+        }
+
+        .signature-section-container .date-line input.input-line {
+            flex-grow: 1;
+        }
+
+        .signature-section-container .signature-title-block {
+            flex-basis: 65%;
+            text-align: left;
+        }
+
+        /* .signature-line-above is replaced by input */
+        .signature-title-block input.input-line.signature-input-field {
+            width: 100%;
+            margin-bottom: calc(var(--spacing-unit) / 2);
+            /* Original spacing */
+        }
+
+        .signature-section-container .signature-title-text p {
+            margin: 0 0 calc(var(--spacing-unit) / 4) 0;
+            line-height: var(--line-height-condensed);
+            font-size: var(--font-size-small);
+        }
+
+        /* Footer */
+        .form-footer {
+            padding-top: var(--spacing-unit);
+            font-size: var(--font-size-xsmall);
+            line-height: var(--line-height-condensed);
+        }
+
+        .form-footer .guidance-text p {
+            margin-bottom: var(--spacing-unit);
+            font-size: var(--font-size-small);
+            line-height: var(--line-height-normal);
+        }
+
+        .form-footer .strike-note p {
+            margin-bottom: var(--spacing-unit);
+            font-size: var(--font-size-small);
+            line-height: var(--line-height-normal);
+        }
+
+        .pto-mark {
+            text-align: right;
+            font-weight: bold;
+            margin-top: var(--spacing-unit);
+            font-size: var(--font-size-small);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+        <header class="form-header-section">
+            <div class="form-header-top">
+                <div class="payment-terms">
+                    <p class="sinhala-text">නිකුත් කළ දින පටන් 30 දවසක් ඇතුළත දී ගෙවිය යුතුයි.</p>
+                    <p class="tamil-text">வழங்கப்பட்ட திகதிவியிலிருந்து 30 நாட்களுக்குலுக் செத்தப்படல் வேண்டும்</p>
+                    <p class="english-text">Payable within 30 days from the date of issue</p>
+                </div>
+                <div class="reference-numbers">
+                    <div class="ref-item">
+                        <div class="ref-labels">
+                            <span class="ref-label sinhala-text">වවුචර් අංකය</span>
+                            <span class="ref-label tamil-text">வவுச்சர் இல</span>
+                            <span class="ref-label english-text">Voucher No.</span>
+                        </div>
+                        <span class="ref-brace">}</span>
+                        <input type="text" class="ref-box">
+                    </div>
+                    <div class="ref-item">
+                        <div class="ref-labels">
+                            <span class="ref-label sinhala-text">චෙක්පත් අංකය</span>
+                            <span class="ref-label tamil-text">காசோலை இல</span>
+                            <span class="ref-label english-text">Cheque No.</span>
+                        </div>
+                        <span class="ref-brace">}</span>
+                        <input type="text" class="ref-box">
+                    </div>
+                    <div class="ref-item general-ref-item">
+                        <div class="ref-labels">
+                            <span class="sinhala-text">පොදු</span>
+                            <span class="tamil-text">பொது</span>
+                            <span class="english-text">General</span>
+                        </div>
+                        <span class="ref-brace">}</span>
+                        <input type="text" class="ref-value" value="35">
+                    </div>
+                </div>
+            </div>
+            <div class="form-main-title-block">
+                <h1 class="main-title-text">
+                    <span class="title-sinhala sinhala-text">ශ්‍රී ලංකාව</span><span
+                        class="title-tamil tamil-text">/இலங்கை</span><span class="title-english english-text">/SRI
+                        LANKA</span>
+                </h1>
+            </div>
+        </header>
+
+        <section class="station-details">
+            <div class="detail-line">
+                <span class="label sinhala-text">ස්ථානය</span><span class="label tamil-text">/நிலையயும்</span><span
+                    class="label english-text">/Station:</span>
+                <input type="text" class="input-line">
+            </div>
+            <div class="detail-line">
+                <span class="label sinhala-text">වැය විස්තරය</span><span class="label tamil-text">/செலவு
+                    விபரம்</span><span class="label english-text">/Debit Particulars :</span>
+                <input type="text" class="input-line">
+            </div>
+            <div class="detail-line">
+                <span class="label english-text">PAYABLE TO :</span>
+                <input type="text" class="input-line">
+                <span class="suffix-text sinhala-text">ට ගෙවිය යුතුය</span><span class="suffix-text tamil-text">/செலுத்த
+                    வேண்டும்.</span>
+            </div>
+        </section>
+
+        <section class="item-details-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-date" rowspan="2">
+                            <span class="sinhala-text">දිනය</span>
+                            <span class="tamil-text">திகதி</span>
+                            <span class="english-text">Date</span>
+                        </th>
+                        <th class="col-description" rowspan="2">
+                            <span class="sinhala-text">ඉටු කළ සේවයේ හෝ කරන ලද වැඩයේ හෝ සැපයූ බඩුවල විස්තරයක් හා අවශ්‍ය
+                                නම් අනුමත කරන නිලධාරියාගේ සහතිකයක්</span>
+                            <span class="tamil-text">வழங்கிய சேவை, செய்த வேலைகள் அல்லது வழங்கிய பொருட்களின் முழு விபரம்.
+                                தேவையாயின் அங்கீகரிக்கும் அலுவலரின் அத்தாட்சிப் பத்திரமும்</span>
+                            <span class="english-text">Detailed description of service rendered, work executed, or goods
+                                supplied and Certificate of Approving officer, where necessary</span>
+                        </th>
+                        <th class="col-rate" rowspan="2">
+                            <span class="sinhala-text">ගාස්තු</span><br /><span class="sinhala-text">ප්‍රමාණය</span>
+                            <span class="tamil-text">பெறுமதி</span>
+                            <span class="english-text">Rate</span>
+                        </th>
+                        <th class="col-amount" colspan="2">
+                            <span class="sinhala-text">මුදල</span>
+                            <span class="tamil-text">தொகை</span>
+                            <span class="english-text">Amount</span>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th class="sub-col-rs">
+                            <span class="sinhala-text">රු.</span>
+                            <span class="tamil-text">ரூ</span>
+                            <span class="english-text">Rs.</span>
+                        </th>
+                        <th class="sub-col-cts">
+                            <span class="sinhala-text">ශත</span>
+                            <span class="tamil-text">சதம்</span>
+                            <span class="english-text">cts.</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="authority-row">
+                        <td class="input-cell"><input type="text" class="table-input" placeholder="Date"></td>
+                        <td class="authority-text-cell">
+                            <input type="text" class="input-line authority-description-line"
+                                placeholder="Enter authority details here...">
+                            <div class="payment-authority-text-block">
+                                <p class="sinhala-text">ගෙවීමට ඇති බලය සහ ගොනු සම්බන්ධය</p>
+                                <p class="tamil-text">கொடுப்பனவுக்கு உரிய அதிகாரமும் கோவை விபரமும்</p>
+                                <p class="english-text">Authority for payment and reference to file</p>
+                            </div>
+                        </td>
+                        <td class="input-cell"><input type="text" class="table-input" placeholder="Rate"></td>
+                        <td class="input-cell"><input type="text" class="table-input" placeholder="Rs."></td>
+                        <td class="input-cell"><input type="text" class="table-input" placeholder="cts."></td>
+                    </tr>
+                    <tr class="preparation-total-row">
+                        <td colspan="2" class="preparation-cell">
+                            <div class="prep-line">
+                                <span class="label english-text">Prepared by:</span>
+                                <input type="text" class="input-line">
+                                <span class="annotation sinhala-text">විසින් සකස් කරන ලදී </span><span
+                                    class="annotation tamil-text">/ ஆல் தயாரிக்கப் பெற்றது.</span>
+                            </div>
+                            <div class="prep-line">
+                                <span class="label english-text">Checked by:</span>
+                                <input type="text" class="input-line">
+                                <span class="annotation sinhala-text">විසින් පරීක්ෂා කරන ලදී </span><span
+                                    class="annotation tamil-text">/ ஆல் பரிசோதிக்கப் பெற்றது.</span>
+                            </div>
+                        </td>
+                        <td class="total-label-cell">
+                            <span class="label sinhala-text">මුළු ගණන</span>
+                            <span class="label tamil-text">மொத்தம்</span>
+                            <span class="label english-text">Total</span>
+                        </td>
+                        <td class="total-value-cell input-cell"><input type="text" class="table-input"
+                                placeholder="Total Rs."></td>
+                        <td class="total-value-cell input-cell"><input type="text" class="table-input"
+                                placeholder="Total cts."></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="certification">
+            <p class="sinhala-text">
+                ඉහත කී සැපයීම්*/සේවාවන්*/වැඩ* විධි වූ පරිදි අනුමැතිය ඇතිව කරන ලද බවත්, ඒ සඳහා රුපියල්<input type="text"
+                    class="input-line rupees-line">කුත්, ශත.<input type="text" class="input-line cents-line">ගෙවීම
+                රෙගුලාසිවලට*/කොන්ත්‍රාත්තුවට*/අනුකූලවන බවත්*/සාධාරණ සහ යුක්ති සහගත වන බවත්*/මගේම දැනුම අනුව*/මීට අදාල වන
+                ගොනුවල ඇති සහතික අනුව*/සහතික කරමි.
+            </p>
+            <p class="tamil-text">
+                சம்பந்தப்பட்ட கோவைகளில் உள்ள அத்தாட்சிகளின்படி மேலே வழங்கப்பட்ட பொருட்கள்*/சேவைகள்*/வேலைகள்* உரிய
+                அதிகாரனளிக்கப்பட்ட நிபந்தனைகளுக்கும் ஒப்பந்தங்களுக்கும் ஏற்றவாறு நிறைவேற்றப்பட்டு செலுத்தப்பட்ட
+                கொடுப்பனவாகிய ரூபா.<input type="text" class="input-line rupees-line">சதம்<input type="text"
+                    class="input-line cents-line">எனது அறிவுக்கு எட்டிய வரை நியாயமானதும் சரியானதும் என நான் இத்தால்
+                அத்தாட்சிப்படுத்து கிறேன்.
+            </p>
+            <p class="english-text">
+                I certify from personal knowledge*/ from the certificates in the relevant files*/ that the above
+                supplies*/ services*/ works* were duly authorised and performed and that the payment of Rupees<input
+                    type="text" class="input-line rupees-line">and cents<input type="text"
+                    class="input-line cents-line">is in accordance with regulations*/ contract*/ fair and reasonable.
+            </p>
+        </section>
+
+        <section class="signature-section-container">
+            <div class="date-line">
+                <span class="label sinhala-text">දිනය</span><span class="label tamil-text">/திகதி</span><span
+                    class="label english-text">/Date:</span>
+                <input type="text" class="input-line">
+            </div>
+            <div class="signature-title-block">
+                <input type="text" class="input-line signature-input-field" placeholder="Signature">
+                <div class="signature-title-text">
+                    <p class="sinhala-text">වියදම සහතික කරන නිලධාරියාගේ අත්සන සහ පදවිය.</p>
+                    <p class="tamil-text">செலவிளங்களை அத்தாட்சிப்படுத்தும் அலுவலரிள் கையொப்பமும் பதவியும்.</p>
+                    <p class="english-text">Signature and Title of Officer Certifying Expenditure.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="form-footer">
+            <div class="guidance-text">
+                <p>
+                    <span class="sinhala-text">සහතික කිරීමට හෝ ගෙවීමට පෙර මු.රෙ.135-140 දක්වා අවධානය යොමු
+                        කරන්න.</span><br />
+                    <span class="tamil-text">அத்தாட்சிப் படுத்துவதற்கு முன்/கொடுப்பனவு செய்ய முன் நிதி ஒழுங்குகள்
+                        135-140 இற்கு கவனம் கோரப்படுகின்றது.</span><br />
+                    <span class="english-text">Before certifying / paying, draw attention to F.R.R. 135-140.</span>
+                </p>
+            </div>
+            <div class="strike-note">
+                <p>
+                    <span class="sinhala-text">සටහන - * අනවශ්‍ය වචන කපා හරින්න. </span>
+                    <span class="tamil-text">/ குறிப்பு :- தேவையற்ற சொற்களை வெட்டவும். </span>
+                    <span class="english-text">/ Note. – Strike out words inapplicable.</span>
+                </p>
+            </div>
+            <div class="pto-mark">
+                <span class="sinhala-text">අ.පි.ස.</span><span class="tamil-text">/ ம.பா.செ.</span><span
+                    class="english-text">/ P.T.O.</span>
+            </div>
+        </footer>
+
+    </div>
+</body>
+
+</html>

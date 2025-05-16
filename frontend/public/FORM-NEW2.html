@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="si">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Template - Updated Section</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala&family=Noto+Sans+Tamil&family=Roboto:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        /* style.css content */
+        :root {
+            --primary-font: 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Roboto', Arial, sans-serif;
+            --text-color: #000000;
+            --line-color: #333333;
+            /* Darker dots for better visibility */
+            --border-color: #cccccc;
+            --stamp-box-border-color: #333333;
+
+            --font-size-normal: 10pt;
+            --font-size-small: 8pt;
+            --font-size-x-small: 7.5pt;
+            /* For stamp box text */
+            --font-size-large-brace: 3.8em;
+
+            --spacing-unit: 8px;
+            --line-height-normal: 1.5;
+            --line-height-tight: 1.25;
+            --line-height-very-tight: 1.1;
+
+            --dot-vertical-offset: -4px;
+            /* Adjust to align dots with text baseline */
+        }
+
+        body {
+            font-family: var(--primary-font);
+            font-size: var(--font-size-normal);
+            color: var(--text-color);
+            line-height: var(--line-height-normal);
+            margin: 0;
+            background-color: #f0f0f0;
+            /* So we can see the white form */
+            padding: calc(var(--spacing-unit) * 2);
+        }
+
+        .form-container {
+            background-color: #ffffff;
+            max-width: 680px;
+            /* Adjusted for a more compact form feel */
+            margin: 0 auto;
+            padding: calc(var(--spacing-unit) * 3);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-section {
+            margin-bottom: calc(var(--spacing-unit) * 1.25);
+        }
+
+        .form-section:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .form-line {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: calc(var(--spacing-unit) * 0.4);
+            flex-wrap: nowrap;
+        }
+
+        .form-line>span,
+        .form-line>div {
+            /* Target direct children spans or divs within form-line */
+            white-space: nowrap;
+            margin-right: calc(var(--spacing-unit) * 0.35);
+            /* Tighter spacing between elements */
+        }
+
+        .form-line>span:last-child,
+        .form-line>div:last-child {
+            margin-right: 0;
+        }
+
+        .label-fixed {
+            /* For labels like "20" or "Rs." that should not stretch */
+            flex-shrink: 0;
+        }
+
+        .label-fixed-sm {
+            width: 25px;
+            flex-shrink: 0;
+        }
+
+        .label-fixed-md {
+            width: 45px;
+            flex-shrink: 0;
+        }
+
+
+        .dots-fill {
+            flex-grow: 1;
+            border-bottom: 0.75px dotted var(--line-color);
+            margin-left: calc(var(--spacing-unit) * 0.25);
+            margin-right: calc(var(--spacing-unit) * 0.25);
+            margin-bottom: var(--dot-vertical-offset);
+            min-width: 10px;
+            /* Can be small */
+            height: 0.8em;
+            /* Helps with baseline alignment */
+        }
+
+        .dots-short {
+            flex-grow: 0.2;
+            min-width: 30px;
+        }
+
+        .dots-medium {
+            flex-grow: 0.5;
+            min-width: 50px;
+        }
+
+        .dots-long {
+            flex-grow: 2;
+        }
+
+
+        .labels-group {
+            /* Reused for witnesses and paying officer */
+            line-height: var(--line-height-tight);
+        }
+
+        .labels-group p {
+            margin: 1px 0;
+            /* Minimal margin for tight packing */
+            font-size: var(--font-size-normal);
+        }
+
+        .curly-brace {
+            /* Reused */
+            font-size: var(--font-size-large-brace);
+            line-height: 0.7;
+            /* Adjust for vertical span of brace */
+            font-weight: lighter;
+            margin-left: var(--spacing-unit);
+            color: var(--text-color);
+        }
+
+        .hr-separator {
+            border: 0;
+            border-top: 0.75px solid var(--border-color);
+            margin: calc(var(--spacing-unit) * 2.5) 0;
+        }
+
+        /* .hr-separator-light removed as it's not in the focused image section */
+
+        .warrant-section .form-line {
+            margin-bottom: calc(var(--spacing-unit) * 0.3);
+        }
+
+        .warrant-text-block {
+            /* For the long Sinhala/Tamil/English descriptions */
+            line-height: var(--line-height-tight);
+            margin-right: calc(var(--spacing-unit) * 0.5);
+        }
+
+        .indented-line {
+            padding-left: calc(var(--spacing-unit) * 2);
+            /* Indent subsequent lines of a warrant item */
+        }
+
+        .indented-line .label-fixed {
+            margin-left: calc(var(--spacing-unit) * -2);
+            /* Counteract padding for first element if needed */
+        }
+
+        .form-footer {
+            text-align: center;
+            font-size: var(--font-size-small);
+            margin-top: calc(var(--spacing-unit) * 3);
+            border-top: 1px solid var(--border-color);
+            padding-top: var(--spacing-unit);
+        }
+
+        /* Styles for the updated section based on the new image */
+        .witnesses-section {
+            display: flex;
+            align-items: center;
+            margin-bottom: calc(var(--spacing-unit) * 3);
+            /* Increased space below witnesses */
+        }
+
+        .stamp-and-signature-area-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            /* Aligns children (stamp-box, signature-line-and-text) to the right */
+            width: fit-content;
+            /* Takes width of its content */
+            margin-left: auto;
+            /* Pushes this whole block to the right of .form-container */
+            margin-bottom: calc(var(--spacing-unit) * 2.5);
+            /* Space below this area */
+        }
+
+        .stamp-box {
+            border: 1px dotted var(--stamp-box-border-color);
+            padding: calc(var(--spacing-unit) * 0.75) var(--spacing-unit);
+            text-align: center;
+            font-size: var(--font-size-x-small);
+            line-height: var(--line-height-very-tight);
+            width: 170px;
+            /* Specific width for stamp box */
+            flex-shrink: 0;
+            margin-bottom: var(--spacing-unit);
+            /* Space between stamp box and the line/text below */
+        }
+
+        .stamp-box p {
+            margin: calc(var(--spacing-unit) * 0.25) 0;
+        }
+
+        .signature-line-and-text {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Centers the dotted line and text block below it */
+            width: 220px;
+            /* Explicit width, wider than stamp box */
+        }
+
+        .external-signature-dotted-line {
+            width: 100%;
+            /* Takes full width of its parent (.signature-line-and-text) */
+            border-bottom: 0.75px dotted var(--line-color);
+            margin-bottom: calc(var(--spacing-unit) * 0.5);
+        }
+
+        .signature-text-block {
+            text-align: center;
+            font-size: var(--font-size-small);
+            line-height: var(--line-height-tight);
+        }
+
+        .signature-text-block p {
+            margin: 0;
+        }
+
+        .paying-officer-boxed-section {
+            border: 1px solid var(--text-color);
+            /* Solid border as per image */
+            padding: var(--spacing-unit);
+            margin-top: calc(var(--spacing-unit) * 1.5);
+            /* Space above this box */
+        }
+
+        .paying-officer-content {
+            display: flex;
+            align-items: center;
+            /* Vertically align text, brace, and dots */
+        }
+
+        .paying-officer-content .curly-brace {
+            margin-right: calc(var(--spacing-unit) * 0.5);
+            /* Space between brace and start of dots */
+        }
+
+        .paying-officer-content .dots-fill {
+            margin-left: 0;
+            /* Dots start right after brace+margin */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+        <!-- SECTION 1: Receipt Details Sinhala (Example, keeping first parts of form) -->
+        <div class="form-section">
+            <div class="form-line">
+                <span class="label-fixed">පසු පිටේ සඳහන් ගණනය වෙනුවෙන් රුපියල්</span>
+                <span class="dots-fill dots-long"></span>
+                <span class="label-fixed">ශත</span>
+            </div>
+            <div class="form-line">
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill"></span>
+                <span class="label-fixed">මස</span>
+                <span class="dots-fill dots-short"></span>
+                <span class="label-fixed">වැනිදා</span>
+            </div>
+            <div class="form-line">
+                <span>වන මෙදින බාර ගතිමි.</span>
+            </div>
+        </div>
+
+        <!-- SECTION 2: Receipt Details Tamil -->
+        <div class="form-section">
+            <div class="form-line">
+                <span class="label-fixed">ரூபா.</span>
+                <span class="dots-fill dots-long"></span>
+                <span class="label-fixed">சதம்.</span>
+            </div>
+            <div class="form-line">
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill"></span>
+                <span class="label-fixed">மாதம்</span>
+                <span class="dots-fill dots-short"></span>
+                <span class="label-fixed">ஆம் நாளாகிய இன்று பெற்றுக்கொண்டேன்.</span>
+            </div>
+        </div>
+
+        <!-- SECTION 3: Receipt Details English -->
+        <div class="form-section">
+            <div class="form-line">
+                <span class="label-fixed">RECEIVED this</span>
+                <span class="dots-fill dots-medium"></span>
+                <span class="label-fixed">day of</span>
+                <span class="dots-fill dots-medium"></span>
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill dots-short"></span>
+                <span class="label-fixed">in</span>
+            </div>
+            <div class="form-line">
+                <span class="label-fixed">payment of the Account, overleaf the sum of Rupees</span>
+                <span class="dots-fill"></span>
+                <span class="label-fixed">and</span>
+            </div>
+            <div class="form-line">
+                <span class="label-fixed">cents</span>
+                <span class="dots-fill dots-long"></span>
+            </div>
+        </div>
+
+        <!-- START OF UPDATED SECTION AS PER NEW IMAGE -->
+
+        <!-- SECTION 4: Witnesses -->
+        <div class="witnesses-section">
+            <div class="labels-group">
+                <p>සාක්ෂිකාරයෝ</p>
+                <p>சாட்சி</p>
+                <p>Witnesses</p>
+            </div>
+            <span class="curly-brace">}</span>
+        </div>
+
+        <!-- SECTION 5: Stamp Box and Receiver Signature (All on the right) -->
+        <div class="stamp-and-signature-area-right">
+            <div class="stamp-box">
+                <p>මුද්දර ගාස්තු පනත අනුව මුද්දර අලවන්න.</p>
+                <p>முத்திரைத் தீர்வைச் சட்டப்படி ஏற்ற முத்திரை ஒட்டுக.</p>
+                <p>Affix Stamp as per Stamp Duty Act</p>
+            </div>
+            <div class="signature-line-and-text">
+                <div class="external-signature-dotted-line"></div>
+                <div class="signature-text-block">
+                    <p>ලබාගන්නාගේ අත්සන</p>
+                    <p>பெறுபவரின் கையொப்பம்</p>
+                    <p>Signature of Receiver</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 6: Paying Officer (Boxed) -->
+        <div class="paying-officer-boxed-section">
+            <div class="paying-officer-content">
+                <div class="labels-group">
+                    <p>ගෙවන නිලධාරියාගේ අත්සන සහ දිනය</p>
+                    <p>வழங்கும் அலுவலரின் கையொப்பமும் திகதியும்</p>
+                    <p>Signature of Paying Officer and Date</p>
+                </div>
+                <span class="curly-brace">}</span>
+                <span class="dots-fill dots-long"></span>
+            </div>
+        </div>
+
+        <!-- END OF UPDATED SECTION -->
+
+        <hr class="hr-separator"> <!-- This was after the original paying officer section, before warrants -->
+
+        <!-- SECTION 7: Warrant Details (Example, keeping this part of the form) -->
+        <div class="form-section warrant-section">
+            <div class="form-line">
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill dots-short"></span>
+                <span class="warrant-text-block">වැනි සාමාන්‍ය / විශේෂ බලපත්‍ර / ஆம் திகதிய விசேட அதிகாரப் பத்திர
+                    இல.:</span>
+                <span class="dots-fill"></span>
+            </div>
+            <div class="form-line indented-line">
+                <span class="label-fixed">பத்திர இல.:</span>
+                <span class="dots-fill dots-medium"></span>
+                <span class="label-fixed">General/Special Warrant No.</span>
+                <span class="dots-fill"></span>
+                <span class="label-fixed">of</span>
+            </div>
+            <div class="form-line indented-line">
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill dots-long"></span>
+            </div>
+
+            <div class="form-line" style="margin-top: var(--spacing-unit);">
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill dots-short"></span>
+                <span class="warrant-text-block">වැනි අත්තිකාරම්/වගකීම් මුදල් බලපත්‍ර/ முன்பண / பொறுப்பு அதிகாரப் பத்திர
+                    இல.</span>
+                <span class="dots-fill"></span>
+            </div>
+            <div class="form-line indented-line">
+                <span class="label-fixed">Advance/ Imprest Warrant No.</span>
+                <span class="dots-fill dots-long"></span>
+            </div>
+
+            <div class="form-line" style="margin-top: var(--spacing-unit);">
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill dots-short"></span>
+                <span class="warrant-text-block">වැනි බලය ஆம் திகதிய அதிகாரப் பத்திர இல</span>
+                <span class="dots-fill"></span>
+                <span class="label-fixed label-fixed-sm">20</span>
+                <span class="dots-fill dots-short"></span>
+            </div>
+            <div class="form-line indented-line">
+                <span class="label-fixed">Authority No.</span>
+                <span class="dots-fill dots-medium"></span>
+                <span class="label-fixed">of 20</span>
+                <span class="dots-fill dots-long"></span>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="form-footer">
+            <p>H – 058659 – 1.000.000 (2023/06) P ශ්‍රී ලංකා රජයේ මුද්‍රණ දෙපාර්තමේන්තුව</p>
+        </footer>
+    </div>
+</body>
+
+</html>

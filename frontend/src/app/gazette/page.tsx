@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Keep Image import just in case, although image-specific rendering is removed
 import { usePathname } from 'next/navigation';
 
 // Assume Gazette type is defined elsewhere or inline
@@ -43,15 +42,6 @@ export default function GazettePage() {
   }>({ type: null, message: '' });
   const [userId, setUserId] = useState<number | null>(null); // User ID for PDF upload
   const [username, setUsername] = useState<string>(''); // Username for PDF upload
-
-  // Removed image-specific user state
-
-
-  // Removed activeTab state as there's only one main view now
-
-  // Removed state variables for image upload form
-  // Removed uploadResult state (PDF upload result is handled by notification)
-
 
   // State for search filters
   const [searchName, setSearchName] = useState('');

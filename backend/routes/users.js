@@ -57,7 +57,6 @@ router.put('/:id', auth, admin, async (req, res) => {
     const {
       username,
       password,
-      full_name,
       role,
       is_active,
       nic_number,
@@ -103,11 +102,6 @@ router.put('/:id', auth, admin, async (req, res) => {
     if (password) {
       updateFields.push('password = ?');
       updateValues.push(await bcrypt.hash(password, 10));
-    }
-
-    if (full_name !== undefined) {
-      updateFields.push('full_name = ?');
-      updateValues.push(full_name);
     }
 
     if (role) {

@@ -8,7 +8,6 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true); // Loading state for initial authentication check
   const pathname = usePathname(); // Get current path for navigation highlighting
   const router = useRouter(); // Router for navigation
-  const [activeMenuItem, setActiveMenuItem] = useState('add'); // State for sidebar active item
 
   // Check if user is authenticated and is an admin on component mount
   useEffect(() => {
@@ -112,7 +111,7 @@ export default function AdminDashboardPage() {
         {/* Add Users Card */}
         <div
           className={cardClasses}
-          onClick={() => setActiveMenuItem('add')}
+          onClick={() => router.push('/admin_dashboard/add_users')}
         >
           <div className={`${cardIconClasses} bg-blue-100 text-blue-600`}>
             👤

@@ -3,7 +3,6 @@
     "id": "1683900000000",
     "username": "admin",
     "password": "$2a$10$yCzWZVN1F.LE9NcPWMaO3uqRqT.Tz9qZl8VYaUKVdKRNcWBn/xTjW",
-    "full_name": "Admin User",
     "role": "admin",
     "is_active": true,
     "nic_number": "123456789V",

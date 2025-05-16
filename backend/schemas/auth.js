@@ -10,9 +10,8 @@ const loginSchema = z.object({
 const userSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  full_name: z.string().min(1, { message: 'Full name is required' }),
-  role: z.enum(['admin', 'deo', 'vo'], { 
-    message: 'Role must be one of: admin, deo, vo' 
+  role: z.enum(['admin', 'deo', 'vo'], {
+    message: 'Role must be one of: admin, deo, vo'
   }),
   is_active: z.enum(['yes', 'no']).optional().default('yes'),
   nic_number: z.string().optional(),

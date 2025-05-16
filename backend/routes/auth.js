@@ -24,13 +24,8 @@ router.post('/register', async (req, res) => {
     const {
       username,
       password,
-      full_name,
       role,
-      is_active,
-      nic_number,
-      tel_number,
-      address,
-      profession
+      is_active
     } = validationResult.data;
 
     // Check if user already exists
@@ -174,8 +169,7 @@ router.post('/login', async (req, res) => {
           token,
           user: {
             ...userWithoutPassword,
-            role: frontendRole,
-            full_name: user.full_name || `${frontendRole} User` // Fallback name if not available
+            role: frontendRole
           }
         });
       }

@@ -21,7 +21,6 @@ export const userSchema = z.object({
   id: z.number(),
   username: z.string(),
   role: z.enum(['admin', 'dataEntryOfficer', 'verificationOfficer']),
-  full_name: z.string().optional(),
   is_active: z.enum(['yes', 'no']).optional(),
 });
 

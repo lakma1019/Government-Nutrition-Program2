@@ -8,7 +8,6 @@ export interface User {
   id: number;
   username: string;
   role: 'admin' | 'dataEntryOfficer' | 'verificationOfficer';
-  full_name?: string;
   is_active?: 'yes' | 'no';
 }
 
@@ -54,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Check for user in localStorage
         const storedUser = localStorage.getItem('user');
         const storedToken = localStorage.getItem('token');
-        
+
         if (storedUser && storedToken) {
           setUser(JSON.parse(storedUser));
           setToken(storedToken);
@@ -92,7 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Store user and token
         setUser(data.user);
         setToken(data.token);
-        
+
         // Save to localStorage
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token);
@@ -121,11 +120,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Clear state
     setUser(null);
     setToken(null);
-    
+
     // Clear localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    
+
     // Redirect to login
     router.push('/login');
   };

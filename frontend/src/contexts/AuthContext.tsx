@@ -127,6 +127,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(user));
     localStorage.setItem('token', token);
 
+    // Also store token in user object for backward compatibility
+    const userWithToken = { ...user, token };
+    localStorage.setItem('user', JSON.stringify(userWithToken));
+
+    console.log('Auth token stored in localStorage:', token);
+    console.log('User with token stored in localStorage');
+
     // Redirect based on role
     if (user.role === 'admin') {
       router.push('/admin_dashboard');

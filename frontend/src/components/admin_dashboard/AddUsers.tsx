@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { addUserSchema, type AddUserFormData } from '@/schemas/userForms';
 import { ZodError } from 'zod';
 import { useFetchWithCSRF } from '@/hooks/useFetchWithCSRF';
 
 export default function AddUsersComponent() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,15 +127,91 @@ export default function AddUsersComponent() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(true);
-        // Reset form
-        setFormData({
-          username: '',
-          password: '',
-          confirmPassword: '',
-          role: 'admin',
-          isActive: 'yes'
-        });
+        // Check if this is a DEO or VO user that requires additional details
+        if (data.requiresAdditionalDetails && data.user && data.user.id) {
+          // Log user data for debugging
+          console.log('User created successfully:', data.user);
+          console.log('User ID for redirection:', data.user.id);
+
+          // Store the authentication token in localStorage
+          if (data.token) {
+            console.log('Storing authentication token in localStorage');
+            localStorage.setItem('token', data.token);
+          } else {
+            console.warn('No token received from server');
+          }
+
+          // Store user ID and role for manual redirection if needed
+          setCreatedUserId(data.user.id);
+          setCreatedUserRole(data.user.role);
+
+          // Show a temporary success message
+          setSuccess(true);
+          setError(null);
+
+          // Show manual redirect button after 3 seconds if automatic redirection fails
+          setTimeout(() => {
+            setShowManualRedirect(true);
+          }, 3000);
+
+          // Redirect to the appropriate details page based on role after a short delay
+          // This gives time for the success message to be seen and ensures the user creation is fully processed
+          setTimeout(() => {
+            // Add more debugging to see the exact role value
+            console.log('User role for redirection check:', data.user.role);
+
+            if (data.user.role === 'dataEntryOfficer' || data.user.role === 'deo') {
+              // Use Next.js router for navigation
+              console.log('Redirecting to DEO details page with userId:', data.user.id);
+              try {
+                router.push(`/admin_dashboard/add_users/deo_details?userId=${data.user.id}`);
+
+                // Set a fallback in case router.push doesn't trigger navigation
+                setTimeout(() => {
+                  console.log('Fallback: Using window.location for DEO details redirection');
+                  window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
+                }, 2000);
+              } catch (error) {
+                console.error('Router navigation error:', error);
+                window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
+              }
+            } else if (data.user.role === 'verificationOfficer' || data.user.role === 'vo') {
+              // Use Next.js router for navigation
+              console.log('Redirecting to VO details page with userId:', data.user.id);
+              try {
+                router.push(`/admin_dashboard/add_users/vo_details?userId=${data.user.id}`);
+
+                // Set a fallback in case router.push doesn't trigger navigation
+                setTimeout(() => {
+                  console.log('Fallback: Using window.location for VO details redirection');
+                  window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
+                }, 2000);
+              } catch (error) {
+                console.error('Router navigation error:', error);
+                window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
+              }
+            } else {
+              // If role doesn't match any expected value, log it and try direct navigation
+              console.error('Unexpected role value:', data.user.role);
+              if (formData.role === 'deo') {
+                window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
+              } else if (formData.role === 'vo') {
+                window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
+              }
+            }
+          }, 1000); // 1 second delay
+        } else {
+          // For admin users, just show success and reset form
+          setSuccess(true);
+          // Reset form
+          setFormData({
+            username: '',
+            password: '',
+            confirmPassword: '',
+            role: 'admin',
+            isActive: 'yes'
+          });
+        }
       } else {
         // Handle validation errors from backend
         if (data.errors && Array.isArray(data.errors)) {
@@ -156,6 +234,22 @@ export default function AddUsersComponent() {
     }
   };
 
+  // State for manual redirection
+  const [createdUserId, setCreatedUserId] = useState<number | null>(null);
+  const [createdUserRole, setCreatedUserRole] = useState<string | null>(null);
+  const [showManualRedirect, setShowManualRedirect] = useState(false);
+
+  // Function to handle manual redirection
+  const handleManualRedirect = () => {
+    if (createdUserId) {
+      if (createdUserRole === 'dataEntryOfficer' || createdUserRole === 'deo') {
+        window.location.href = `/admin_dashboard/add_users/deo_details?userId=${createdUserId}`;
+      } else if (createdUserRole === 'verificationOfficer' || createdUserRole === 'vo') {
+        window.location.href = `/admin_dashboard/add_users/vo_details?userId=${createdUserId}`;
+      }
+    }
+  };
+
   // CSS Classes
   const containerClasses = "w-full max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md mt-32";
   const headerClasses = "text-2xl font-bold text-gray-800 mb-6 pb-2 border-b";
@@ -172,15 +266,68 @@ export default function AddUsersComponent() {
   const alertSuccessClasses = "p-4 mb-6 rounded-md bg-green-50 text-green-800 border border-green-200";
   const alertErrorClasses = "p-4 mb-6 rounded-md bg-red-50 text-red-800 border border-red-200";
   const backLinkClasses = "inline-flex items-center text-blue-600 hover:text-blue-800 mt-4";
+  const manualRedirectButtonClasses = "mt-4 py-2 px-4 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors";
+
+
 
   return (
     <div className={containerClasses}>
       <h1 className={headerClasses}>Add New User</h1>
 
+      <div className="mb-6 p-4 bg-blue-50 text-blue-800 border border-blue-200 rounded-md">
+        <h3 className="font-medium mb-2">Two-Step Registration Process</h3>
+        <p className="text-sm">
+          When creating a <strong>Data Entry Officer</strong> or <strong>Verification Officer</strong> account,
+          you will be redirected to a second form to provide additional details after the basic account is created.
+        </p>
+      </div>
+
       {/* Success Message */}
       {success && (
         <div className={alertSuccessClasses}>
-          User added successfully!
+          {formData.role === 'admin' ? (
+            <>User added successfully!</>
+          ) : (
+            <>
+              User added successfully! You will be redirected to add additional details...
+
+              {/* Manual redirection button if automatic redirection fails */}
+              {showManualRedirect && (
+                <div className="mt-4">
+                  <p className="text-sm mb-2">
+                    If you are not redirected automatically, please click the button below:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleManualRedirect}
+                    className={manualRedirectButtonClasses}
+                  >
+                    Continue to Additional Details
+                  </button>
+
+                  {/* Direct link as a last resort */}
+                  <div className="mt-2 text-sm">
+                    <p>Or use this direct link:</p>
+                    {createdUserRole === 'dataEntryOfficer' || createdUserRole === 'deo' ? (
+                      <a
+                        href={`/admin_dashboard/add_users/deo_details?userId=${createdUserId}`}
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Go to DEO Details Form
+                      </a>
+                    ) : createdUserRole === 'verificationOfficer' || createdUserRole === 'vo' ? (
+                      <a
+                        href={`/admin_dashboard/add_users/vo_details?userId=${createdUserId}`}
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Go to VO Details Form
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 

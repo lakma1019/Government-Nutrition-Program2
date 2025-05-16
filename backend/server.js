@@ -90,6 +90,7 @@ app.use((err, req, res, next) => {
 // Routes with CSRF protection
 app.use('/api/auth', csrfProtection, require('./routes/auth'));
 app.use('/api/users', csrfProtection, require('./routes/users'));
+app.use('/api/user-details', csrfProtection, require('./routes/userDetails'));
 
 // Default route
 app.get('/', (req, res) => {

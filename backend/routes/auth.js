@@ -87,7 +87,9 @@ router.post('/register', async (req, res) => {
           user: {
             ...userWithoutPassword,
             role: mapDbRoleToFrontend(newUser.role)
-          }
+          },
+          // Include additional information for two-step registration
+          requiresAdditionalDetails: newUser.role === 'deo' || newUser.role === 'vo'
         });
       }
     );

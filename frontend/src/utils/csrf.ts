@@ -45,15 +45,42 @@ export async function getCSRFToken(): Promise<string> {
 }
 
 /**
- * Add CSRF token to fetch options
+ * Add CSRF token and auth token to fetch options
  * @param options - Fetch options
- * @returns Updated fetch options with CSRF token
+ * @returns Updated fetch options with CSRF token and auth token
  */
 export function addCSRFToken(options: RequestInit = {}): RequestInit {
+  // Get auth token from localStorage
+  let authToken = '';
+  try {
+    const userData = localStorage.getItem('user');
+    const tokenData = localStorage.getItem('token');
+
+    if (tokenData) {
+      // If token is stored directly
+      authToken = tokenData;
+    } else if (userData) {
+      // Try to get token from user data if it's stored there
+      const parsedUserData = JSON.parse(userData);
+      if (parsedUserData.token) {
+        authToken = parsedUserData.token;
+      }
+    }
+  } catch (error) {
+    console.error('Error getting auth token from localStorage:', error);
+  }
+
   const headers = {
     ...options.headers,
     'X-CSRF-Token': csrfToken,
   };
+
+  // Add Authorization header if we have a token
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+    // Also add as x-auth-token for compatibility
+    headers['x-auth-token'] = authToken;
+  }
 
   return {
     ...options,

@@ -291,13 +291,13 @@ export default function ViewUsersComponent() {
                     onClick={() => handleSelectUser(user)}
                   >
                     <div className="font-medium">{user.username}</div>
-                    <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <div className="text-sm text-gray-600 flex items-center gap-2 mt-2">
                       <span>Role:</span>
                       {user.role === 'admin' && <span className={adminBadgeClasses}>Admin</span>}
                       {user.role === 'deo' && <span className={deoBadgeClasses}>Data Entry Officer</span>}
                       {user.role === 'vo' && <span className={voBadgeClasses}>Verification Officer</span>}
                     </div>
-                    <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <div className="text-sm text-gray-600 flex items-center gap-2 mt-2">
                       <span>Status:</span>
                       {user.is_active === 'yes'
                         ? <span className={activeBadgeClasses}>Active</span>

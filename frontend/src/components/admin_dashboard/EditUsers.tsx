@@ -329,6 +329,14 @@ export default function EditUsersComponent() {
   const loadingClasses = "flex justify-center items-center h-40 text-xl text-gray-600";
   const emptyStateClasses = "text-center py-8 text-gray-500";
 
+  // Badge classes (copied from ViewUsers component)
+  const badgeBaseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
+  const activeBadgeClasses = `${badgeBaseClasses} bg-green-100 text-green-800`;
+  const inactiveBadgeClasses = `${badgeBaseClasses} bg-red-100 text-red-800`;
+  const adminBadgeClasses = `${badgeBaseClasses} bg-purple-100 text-purple-800`;
+  const deoBadgeClasses = `${badgeBaseClasses} bg-blue-100 text-blue-800`;
+  const voBadgeClasses = `${badgeBaseClasses} bg-yellow-100 text-yellow-800`;
+
   return (
     <div className={containerClasses}>
       <h1 className={headerClasses}>Edit Users</h1>
@@ -378,9 +386,18 @@ export default function EditUsersComponent() {
                     onClick={() => handleSelectUser(user)}
                   >
                     <div className="font-medium">{user.username}</div>
-                    <div className="text-sm text-gray-600">Role: {user.role}</div>
-                    <div className="text-sm text-gray-600">
-                      Status: {user.is_active === 'yes' ? 'Active' : 'Inactive'}
+                    <div className="text-sm text-gray-600 flex items-center gap-2 mt-2">
+                      <span>Role:</span>
+                      {user.role === 'admin' && <span className={adminBadgeClasses}>Admin</span>}
+                      {user.role === 'deo' && <span className={deoBadgeClasses}>Data Entry Officer</span>}
+                      {user.role === 'vo' && <span className={voBadgeClasses}>Verification Officer</span>}
+                    </div>
+                    <div className="text-sm text-gray-600 flex items-center gap-2 mt-2">
+                      <span>Status:</span>
+                      {user.is_active === 'yes'
+                        ? <span className={activeBadgeClasses}>Active</span>
+                        : <span className={inactiveBadgeClasses}>Inactive</span>
+                      }
                     </div>
                   </div>
                 ))
@@ -394,6 +411,23 @@ export default function EditUsersComponent() {
           {selectedUser ? (
             <>
               <h2 className="text-xl font-semibold mb-4">Edit User: {selectedUser.username}</h2>
+
+              {/* User current role and status badges */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">Current Role:</span>
+                  {selectedUser.role === 'admin' && <span className={adminBadgeClasses}>Admin</span>}
+                  {selectedUser.role === 'deo' && <span className={deoBadgeClasses}>Data Entry Officer</span>}
+                  {selectedUser.role === 'vo' && <span className={voBadgeClasses}>Verification Officer</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">Current Status:</span>
+                  {selectedUser.is_active === 'yes'
+                    ? <span className={activeBadgeClasses}>Active</span>
+                    : <span className={inactiveBadgeClasses}>Inactive</span>
+                  }
+                </div>
+              </div>
 
               {/* Success Message */}
               {formSuccess && (
@@ -472,6 +506,12 @@ export default function EditUsersComponent() {
                   <label htmlFor="role" className={labelClasses}>
                     Role *
                   </label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-gray-500">Selected:</span>
+                    {formData.role === 'admin' && <span className={adminBadgeClasses}>Admin</span>}
+                    {formData.role === 'deo' && <span className={deoBadgeClasses}>Data Entry Officer</span>}
+                    {formData.role === 'vo' && <span className={voBadgeClasses}>Verification Officer</span>}
+                  </div>
                   <select
                     id="role"
                     name="role"
@@ -488,6 +528,13 @@ export default function EditUsersComponent() {
                 {/* Active Status */}
                 <div className={formGroupClasses}>
                   <label className={labelClasses}>Status *</label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm text-gray-500">Selected:</span>
+                    {formData.isActive === 'yes'
+                      ? <span className={activeBadgeClasses}>Active</span>
+                      : <span className={inactiveBadgeClasses}>Inactive</span>
+                    }
+                  </div>
                   <div className={radioGroupClasses}>
                     <label className={radioLabelClasses}>
                       <input
@@ -498,7 +545,8 @@ export default function EditUsersComponent() {
                         onChange={handleRadioChange}
                         className={radioInputClasses}
                       />
-                      <span>Active</span>
+                      <span className="mr-1">Active</span>
+                      <span className={activeBadgeClasses}>Active</span>
                     </label>
                     <label className={radioLabelClasses}>
                       <input
@@ -509,7 +557,8 @@ export default function EditUsersComponent() {
                         onChange={handleRadioChange}
                         className={radioInputClasses}
                       />
-                      <span>Inactive</span>
+                      <span className="mr-1">Inactive</span>
+                      <span className={inactiveBadgeClasses}>Inactive</span>
                     </label>
                   </div>
                 </div>

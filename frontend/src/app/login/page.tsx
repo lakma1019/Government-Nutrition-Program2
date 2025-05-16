@@ -169,17 +169,7 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                <div className="flex justify-between items-center mb-[20px]">
-                  <label className="flex items-center text-black">
-                    <input
-                      type="checkbox"
-                      name="remember"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="mr-1"
-                    />
-                    {" "}Remember me
-                  </label>
+                <div className="align-right mb-[20px]">
                   <Link href="/forgot-password" className="no-underline text-black hover:underline">
                     Forgot password
                   </Link>

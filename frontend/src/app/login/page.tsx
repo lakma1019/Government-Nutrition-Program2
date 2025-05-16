@@ -2,221 +2,53 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { loginFormSchema } from "@/schemas/auth";
+import { z } from "zod";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const pathname = usePathname();
-  const router = useRouter();
+
+  // Use our auth context
+  const { login, isLoading, error, clearError } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    clearError();
 
     try {
-      console.log('Attempting to login with:', { username });
+      // Validate form data with Zod
+      const validationResult = loginFormSchema.safeParse({
+        username,
+        password,
+        rememberMe
+      });
 
-      // For testing purposes, use hardcoded credentials
-      if (username === 'admin' && password === 'admin123') {
-        console.log('Using hardcoded admin credentials');
-        const userData = {
-          id: 1,
-          username: 'admin',
-          role: 'admin',
-          full_name: 'Admin User'
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
-        router.push('/admin_dashboard');
-        return;
-      }
-
-      if (username === 'dataeo' && password === 'dataeo123') {
-        console.log('Using hardcoded data entry officer credentials');
-        const userData = {
-          id: 2,
-          username: 'dataeo',
-          role: 'dataEntryOfficer',
-          full_name: 'Data Entry Officer'
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
-        router.push('/DEO_login');
-        return;
-      }
-
-      if (username === 'verifio' && password === 'verifio123') {
-        console.log('Using hardcoded verification officer credentials');
-        const userData = {
-          id: 3,
-          username: 'verifio',
-          role: 'verificationOfficer',
-          full_name: 'Verification Officer'
-        };
-        localStorage.setItem('user', JSON.stringify(userData));
-        router.push('/VO_login');
-        return;
-      }
-
-      // If not using hardcoded credentials, try to connect to the backend
-      console.log('Backend URL:', 'http://localhost:3001/api/auth/login');
-
-      // First check if we should use hardcoded credentials
-      const useHardcodedCredentials = true; // Set to true to always use hardcoded credentials
-
-      if (useHardcodedCredentials) {
-        // Use hardcoded credentials directly
-        if (username === 'admin' && password === 'admin123') {
-          console.log('Using hardcoded admin credentials (skipping backend)');
-          const userData = {
-            id: 1,
-            username: 'admin',
-            role: 'admin',
-            full_name: 'Admin User'
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          router.push('/admin_dashboard');
-          return;
-        } else if (username === 'dataeo' && password === 'dataeo123') {
-          console.log('Using hardcoded data entry officer credentials (skipping backend)');
-          const userData = {
-            id: 2,
-            username: 'dataeo',
-            role: 'dataEntryOfficer',
-            full_name: 'Data Entry Officer'
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          router.push('/DEO_login');
-          return;
-        } else if (username === 'verifio' && password === 'verifio123') {
-          console.log('Using hardcoded verification officer credentials (skipping backend)');
-          const userData = {
-            id: 3,
-            username: 'verifio',
-            role: 'verificationOfficer',
-            full_name: 'Verification Officer'
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          router.push('/VO_login');
-          return;
-        }
-      }
-
-      // If we get here, try to connect to the backend
-      try {
-        console.log('Attempting to connect to backend...');
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-        const response = await fetch('http://localhost:3001/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({ username, password }),
-          mode: 'cors',
-          credentials: 'include',
-          signal: controller.signal
-        }).catch(error => {
-          console.warn('Network error during fetch:', error);
-          return null; // Return null to indicate fetch failed
+      if (!validationResult.success) {
+        // Handle validation errors
+        const errors: Record<string, string> = {};
+        validationResult.error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0].toString()] = err.message;
+          }
         });
-
-        // Clear the timeout since the request completed or failed
-        clearTimeout(timeoutId);
-
-        // If fetch failed (returned null), throw to skip to catch block
-        if (!response) {
-          throw new Error('Network request failed');
-        }
-
-        console.log('Response status:', response.status);
-
-        let data;
-        try {
-          const responseText = await response.text();
-          console.log('Response text:', responseText);
-
-          if (responseText && !responseText.includes('<!DOCTYPE')) {
-            data = JSON.parse(responseText);
-            console.log('Response data:', data);
-          } else {
-            throw new Error('Invalid response format');
-          }
-        } catch (jsonError) {
-          console.error('JSON parsing error:', jsonError);
-          throw new Error('Failed to parse server response');
-        }
-
-        // Continue with the normal flow if we got a response
-        if (data.success) {
-          localStorage.setItem('user', JSON.stringify(data.user));
-
-          if (data.user.role === 'admin') {
-            router.push('/admin_dashboard');
-          } else if (data.user.role === 'dataEntryOfficer') {
-            router.push('/DEO_login');
-          } else if (data.user.role === 'verificationOfficer') {
-            router.push('/VO_login');
-          } else {
-            router.push('/');
-          }
-          return;
-        } else {
-          setError(data.message || 'Login failed');
-        }
-      } catch (fetchError) {
-        console.error('Fetch error:', fetchError);
-        // If we get here, the backend is not responding, so we'll use hardcoded credentials as fallback
-        if (username === 'admin' && password === 'admin123') {
-          console.log('Falling back to hardcoded admin credentials');
-          const userData = {
-            id: 1,
-            username: 'admin',
-            role: 'admin',
-            full_name: 'Admin User'
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          router.push('/admin_dashboard');
-          return;
-        } else if (username === 'dataeo' && password === 'dataeo123') {
-          console.log('Falling back to hardcoded data entry officer credentials');
-          const userData = {
-            id: 2,
-            username: 'dataeo',
-            role: 'dataEntryOfficer',
-            full_name: 'Data Entry Officer'
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          router.push('/DEO_login');
-          return;
-        } else if (username === 'verifio' && password === 'verifio123') {
-          console.log('Falling back to hardcoded verification officer credentials');
-          const userData = {
-            id: 3,
-            username: 'verifio',
-            role: 'verificationOfficer',
-            full_name: 'Verification Officer'
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          router.push('/VO_login');
-          return;
-        } else {
-          setError(`Network error: Unable to connect to the server. Please try again later.`);
-          return;
-        }
+        setValidationErrors(errors);
+        return;
       }
 
-      // This block is now handled inside the try-catch block above
+      // Clear validation errors
+      setValidationErrors({});
+
+      // Call login from auth context
+      await login(username, password);
+
     } catch (err) {
       console.error('Login error:', err);
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -280,8 +112,11 @@ export default function LoginPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
-                    className="w-full p-[10px] border-[3px] border-black rounded-[3px] text-[16px]"
+                    className={`w-full p-[10px] border-[3px] ${validationErrors.username ? 'border-red-500' : 'border-black'} rounded-[3px] text-[16px]`}
                   />
+                  {validationErrors.username && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.username}</p>
+                  )}
                 </div>
 
                 <div className="mb-[20px]">
@@ -296,8 +131,11 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full p-[10px] border-[3px] border-black rounded-[3px] text-[16px]"
+                    className={`w-full p-[10px] border-[3px] ${validationErrors.password ? 'border-red-500' : 'border-black'} rounded-[3px] text-[16px]`}
                   />
+                  {validationErrors.password && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.password}</p>
+                  )}
                 </div>
 
                 <div className="flex justify-between items-center mb-[20px]">
@@ -324,10 +162,10 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  className={`p-[10px] ${loading ? 'bg-[#ccc] cursor-not-allowed' : 'bg-[#f8e58c] hover:bg-[#f5dc6c] cursor-pointer'} border-[3px] border-black rounded-[8px] text-black font-bold text-[16px] w-full`}
-                  disabled={loading}
+                  className={`p-[10px] ${isLoading ? 'bg-[#ccc] cursor-not-allowed' : 'bg-[#f8e58c] hover:bg-[#f5dc6c] cursor-pointer'} border-[3px] border-black rounded-[8px] text-black font-bold text-[16px] w-full`}
+                  disabled={isLoading}
                 >
-                  {loading ? 'Logging in...' : 'Login'}
+                  {isLoading ? 'Logging in...' : 'Login'}
                 </button>
               </form>
             </div>

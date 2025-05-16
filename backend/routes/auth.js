@@ -4,12 +4,23 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const { auth } = require('../middleware/auth');
+const { loginSchema, userSchema, mapDbRoleToFrontend } = require('../schemas/auth');
 
 // @route   POST /api/auth/register
 // @desc    Register a user
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
+    // Validate request body against schema
+    const validationResult = userSchema.safeParse(req.body);
+
+    if (!validationResult.success) {
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: validationResult.error.errors
+      });
+    }
+
     const {
       username,
       password,
@@ -20,12 +31,7 @@ router.post('/register', async (req, res) => {
       tel_number,
       address,
       profession
-    } = req.body;
-
-    // Validate required fields
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
-    }
+    } = validationResult.data;
 
     // Check if user already exists
     const [existingUsers] = await pool.query(
@@ -40,32 +46,23 @@ router.post('/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate unique ID
-    const userId = Date.now().toString();
-
     // Insert new user
     const [result] = await pool.query(
       `INSERT INTO users
-      (id, username, password, full_name, role, is_active, nic_number, tel_number, address, profession)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (username, password, role, is_active)
+      VALUES (?, ?, ?, ?)`,
       [
-        userId,
         username,
         hashedPassword,
-        full_name || '',
-        role || 'verificationOfficer',
-        is_active !== undefined ? is_active : true,
-        nic_number || '',
-        tel_number || '',
-        address || '',
-        profession || ''
+        role,
+        is_active
       ]
     );
 
     // Get the newly created user
     const [newUsers] = await pool.query(
       'SELECT * FROM users WHERE id = ?',
-      [userId]
+      [result.insertId]
     );
 
     const newUser = newUsers[0];
@@ -75,29 +72,33 @@ router.post('/register', async (req, res) => {
       user: {
         id: newUser.id,
         username: newUser.username,
-        role: newUser.role
+        role: mapDbRoleToFrontend(newUser.role)
       }
     };
 
     jwt.sign(
       payload,
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN },
+      process.env.JWT_SECRET || 'defaultsecret',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' },
       (err, token) => {
         if (err) throw err;
 
         // Return user without password
         const { password, ...userWithoutPassword } = newUser;
         res.status(201).json({
+          success: true,
           message: 'User registered successfully',
           token,
-          user: userWithoutPassword
+          user: {
+            ...userWithoutPassword,
+            role: mapDbRoleToFrontend(newUser.role)
+          }
         });
       }
     );
   } catch (err) {
     console.error('Error in register:', err.message);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -106,12 +107,18 @@ router.post('/register', async (req, res) => {
 // @access  Public
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    // Validate request body against schema
+    const validationResult = loginSchema.safeParse(req.body);
 
-    // Validate required fields
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password are required' });
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: validationResult.error.errors
+      });
     }
+
+    const { username, password } = validationResult.data;
 
     // Find user
     const [users] = await pool.query(
@@ -120,50 +127,62 @@ router.post('/login', async (req, res) => {
     );
 
     if (users.length === 0) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ success: false, message: 'Invalid credentials' });
     }
 
     const user = users[0];
 
     // Check if user is active
-    if (!user.is_active) {
-      return res.status(400).json({ message: 'Account is inactive' });
+    if (user.is_active === 'no') {
+      return res.status(400).json({ success: false, message: 'Account is inactive' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ success: false, message: 'Invalid credentials' });
     }
+
+    // Map database role to frontend role
+    const frontendRole = mapDbRoleToFrontend(user.role);
 
     // Create JWT token
     const payload = {
       user: {
         id: user.id,
         username: user.username,
-        role: user.role
+        role: frontendRole
       }
     };
 
     jwt.sign(
       payload,
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN },
+      process.env.JWT_SECRET || 'defaultsecret',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' },
       (err, token) => {
         if (err) throw err;
 
         // Return user without password
         const { password, ...userWithoutPassword } = user;
+
+        // Get user details from related tables if needed
+        // For example, if it's a DEO, get details from deo_details table
+
         res.json({
+          success: true,
           message: 'Login successful',
           token,
-          user: userWithoutPassword
+          user: {
+            ...userWithoutPassword,
+            role: frontendRole,
+            full_name: user.full_name || `${frontendRole} User` // Fallback name if not available
+          }
         });
       }
     );
   } catch (err) {
     console.error('Error in login:', err.message);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -179,17 +198,58 @@ router.get('/me', auth, async (req, res) => {
     );
 
     if (users.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
     const user = users[0];
 
+    // Map database role to frontend role
+    const frontendRole = mapDbRoleToFrontend(user.role);
+
     // Return user without password
     const { password, ...userWithoutPassword } = user;
-    res.json(userWithoutPassword);
+    res.json({
+      success: true,
+      user: {
+        ...userWithoutPassword,
+        role: frontendRole
+      }
+    });
   } catch (err) {
     console.error('Error in get me:', err.message);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/refresh-token
+// @desc    Refresh JWT token
+// @access  Private
+router.post('/refresh-token', auth, async (req, res) => {
+  try {
+    // Create a new token with the existing user data
+    const payload = {
+      user: {
+        id: req.user.id,
+        username: req.user.username,
+        role: mapDbRoleToFrontend(req.user.role)
+      }
+    };
+
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET || 'defaultsecret',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' },
+      (err, token) => {
+        if (err) throw err;
+        res.json({
+          success: true,
+          token
+        });
+      }
+    );
+  } catch (err) {
+    console.error('Error refreshing token:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

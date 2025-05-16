@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
         {/* Edit Users Card */}
         <div
           className={cardClasses}
-          onClick={() => router.push('/admin_dashboard/edit_user')}
+          onClick={() => router.push('/admin_dashboard/edit_users')}
         >
           <div className={`${cardIconClasses} bg-green-100 text-green-600`}>
             ✏️
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
         {/* View Users Card */}
         <div
           className={cardClasses}
-          onClick={() => router.push('/admin_dashboard/view_profile')}
+          onClick={() => router.push('/admin_dashboard/view_users')}
         >
           <div className={`${cardIconClasses} bg-purple-100 text-purple-600`}>
             📋

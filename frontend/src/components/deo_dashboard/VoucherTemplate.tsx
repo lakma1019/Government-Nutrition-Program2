@@ -116,11 +116,11 @@ const VoucherTemplate: React.FC<VoucherTemplateProps> = ({ formData, onPreview, 
           </button>
         </div>
         <div className="action-buttons">
-          <button onClick={onPreview} className="preview-button">
-            Preview
+          <button className="preview-button">
+            Download
           </button>
           <button onClick={onSendToVerify} className="send-verify-button">
-            To Send Verify
+            Send to Verification
           </button>
         </div>
       </div>

@@ -242,11 +242,6 @@ export default function GenerateProgressReportPage() {
         </div>
       </nav>
 
-      {/* Welcome Header */}
-      <div className="text-center mb-5 bg-[#f8e6f3] p-2.5 rounded-lg print:hidden">
-        <h1 className="text-2xl text-[#333]">Generate Progress Report</h1>
-      </div>
-
       {/* Main Content wrapper */}
       <div className="flex bg-white rounded-[15px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.1)] border-2 border-[#0070f3] print:block print:border-none print:shadow-none">
         {/* Sidebar REMOVED */}

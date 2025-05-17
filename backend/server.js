@@ -92,6 +92,10 @@ app.use('/api/auth', csrfProtection, require('./routes/auth'));
 app.use('/api/users', csrfProtection, require('./routes/users'));
 app.use('/api/user-details', csrfProtection, require('./routes/userDetails'));
 
+// Routes without CSRF protection (using basic auth instead)
+// We're explicitly not using CSRF for these routes as they use username/password auth
+app.use('/api/daily-data', require('./routes/dailyData'));
+
 // Default route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Government Nutrition Program API' });

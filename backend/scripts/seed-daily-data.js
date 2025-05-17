@@ -1,8 +1,11 @@
-const { pool } = require('../config/db');
 const dotenv = require('dotenv');
+const path = require('path');
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from the root .env file
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Import the database connection after loading environment variables
+const { pool } = require('../config/db');
 
 // Sample daily data entries
 const sampleDailyData = [
@@ -61,7 +64,7 @@ async function seedDailyData() {
 
     if (tables.length === 0) {
       console.log('daily_data table does not exist, creating it...');
-      
+
       // Create daily_data table
       await pool.query(`
         CREATE TABLE IF NOT EXISTS daily_data (
@@ -88,7 +91,7 @@ async function seedDailyData() {
 
     // Check if table has data
     const [existingData] = await pool.query('SELECT COUNT(*) as count FROM daily_data');
-    
+
     if (existingData[0].count > 0) {
       console.log(`daily_data table already has ${existingData[0].count} entries, skipping seeding...`);
       return;
@@ -97,8 +100,8 @@ async function seedDailyData() {
     // Seed sample data
     for (const entry of sampleDailyData) {
       await pool.query(
-        `INSERT INTO daily_data 
-        (date, female, male, total, unit_price, amount, method_of_rice_received, meal_recipe, number_of_eggs, fruits) 
+        `INSERT INTO daily_data
+        (date, female, male, total, unit_price, amount, method_of_rice_received, meal_recipe, number_of_eggs, fruits)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           entry.date,

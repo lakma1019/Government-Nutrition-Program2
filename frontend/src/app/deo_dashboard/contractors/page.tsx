@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Define interfaces for Supporter and Contractor data structure
 interface Supporter {
@@ -16,12 +17,15 @@ interface Supporter {
 }
 
 interface Contractor {
+  id?: number;
   nic_number: string;
   full_name: string;
   contact_number: string;
   address?: string;
+  agreement_number?: string;
   agreement_start_date?: string;
   agreement_end_date?: string;
+  is_active?: 'yes' | 'no';
   has_supporter: 'yes' | 'no';
   supporter?: Supporter | null;
   created_at?: string;
@@ -43,14 +47,18 @@ export default function ContractorsManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contractorToDelete, setContractorToDelete] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, token } = useAuth();
 
   const [formData, setFormData] = useState({
     full_name: '',
     contact_number: '',
     address: '',
-    nic_number: '',
+    contractor_nic_number: '', // Changed from nic_number to match backend schema
+    agreement_number: '',
     agreement_start_date: '',
     agreement_end_date: '',
+    is_active: 'yes' as 'yes' | 'no', // Added is_active field required by backend
     has_supporter: 'no' as 'yes' | 'no',
     supporter_name: '',
     supporter_contact_number: '',
@@ -59,12 +67,23 @@ export default function ContractorsManagement() {
   });
 
   const fetchContractors = useCallback(async () => {
+    if (!token) {
+      showNotification('error', 'Authentication required. Please log in.');
+      return;
+    }
+
     try {
       setContractors([]);
       setFilteredContractors([]);
       try {
         console.log('Fetching contractors from backend...');
-        const response = await fetch('http://localhost:3001/api/contractors?username=dataeo1&password=dataeo1123');
+        const response = await fetch('http://localhost:3001/api/contractors', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
         const responseText = await response.text();
         let data;
         try {
@@ -105,11 +124,38 @@ export default function ContractorsManagement() {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       showNotification('error', `An unexpected error occurred: ${errorMessage}`);
     }
-  }, []);
+  }, [token]);
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        // Check if user is authenticated
+        if (!user || !token) {
+          router.push('/login');
+          return;
+        }
+
+        // Check if user is a data entry officer
+        if (user.role !== 'dataEntryOfficer') {
+          alert('Access denied. Only Data Entry Officers can access this page.');
+          router.push('/');
+          return;
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+        router.push('/login');
+      }
+    };
+
+    checkAuth();
+  }, [user, token, router]);
 
   useEffect(() => {
-    fetchContractors();
-  }, [fetchContractors]);
+    if (token) {
+      fetchContractors();
+    }
+  }, [fetchContractors, token]);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -133,9 +179,11 @@ export default function ContractorsManagement() {
       full_name: '',
       contact_number: '',
       address: '',
-      nic_number: '',
+      contractor_nic_number: '',
+      agreement_number: '',
       agreement_start_date: '',
       agreement_end_date: '',
+      is_active: 'yes',
       has_supporter: 'no',
       supporter_name: '',
       supporter_contact_number: '',
@@ -170,7 +218,13 @@ export default function ContractorsManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.full_name || !formData.contact_number || !formData.nic_number || !formData.address) {
+
+    if (!token) {
+      showNotification('error', 'Authentication required. Please log in.');
+      return;
+    }
+
+    if (!formData.full_name || !formData.contact_number || !formData.contractor_nic_number || !formData.address) {
       showNotification('error', 'Please fill in all required fields');
       return;
     }
@@ -179,15 +233,18 @@ export default function ContractorsManagement() {
       return;
     }
     try {
-      const credentials = { username: 'dataeo1', password: 'dataeo1123' };
       let response;
       let responseText;
       let data;
 
       if (editMode && currentContractor) {
-        const dataToUpdate = { ...formData, ...credentials };
         response = await fetch(`http://localhost:3001/api/contractors/${currentContractor.nic_number}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataToUpdate),
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(formData),
         });
         responseText = await response.text();
         try { data = JSON.parse(responseText); } catch (e) { throw new Error(`Server returned invalid JSON: ${responseText}`); }
@@ -199,9 +256,13 @@ export default function ContractorsManagement() {
           throw new Error(data.message || 'Failed to update contractor');
         }
       } else {
-        const dataToAdd = { ...formData, ...credentials };
         response = await fetch('http://localhost:3001/api/contractors', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataToAdd),
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(formData),
         });
         responseText = await response.text();
         try { data = JSON.parse(responseText); } catch (e) { throw new Error(`Server returned invalid JSON: ${responseText}`); }
@@ -227,9 +288,11 @@ export default function ContractorsManagement() {
       full_name: contractor.full_name,
       contact_number: contractor.contact_number,
       address: contractor.address || '',
-      nic_number: contractor.nic_number,
+      contractor_nic_number: contractor.nic_number,
+      agreement_number: contractor.agreement_number || '',
       agreement_start_date: contractor.agreement_start_date || '',
       agreement_end_date: contractor.agreement_end_date || '',
+      is_active: contractor.is_active || 'yes',
       has_supporter: contractor.has_supporter || 'no',
       supporter_name: contractor.supporter?.supporter_name || '',
       supporter_contact_number: contractor.supporter?.supporter_contact_number || '',
@@ -251,10 +314,23 @@ export default function ContractorsManagement() {
       showNotification('error', 'No contractor selected for deletion.');
       return;
     }
+
+    if (!token) {
+      showNotification('error', 'Authentication required. Please log in.');
+      setShowDeleteConfirm(false);
+      return;
+    }
+
     setShowDeleteConfirm(false);
     showNotification(null, '');
     try {
-      const response = await fetch(`http://localhost:3001/api/contractors/${contractorToDelete}?username=dataeo1&password=dataeo1123`, { method: 'DELETE' });
+      const response = await fetch(`http://localhost:3001/api/contractors/${contractorToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const responseText = await response.text();
       let data;
       try { data = JSON.parse(responseText); } catch (e) { throw new Error(`Server returned invalid JSON: ${responseText}`); }
@@ -323,6 +399,8 @@ export default function ContractorsManagement() {
   const noDataCellClasses = "px-6 py-4 text-center text-gray-500 italic";
   const modalOverlayClasses = "fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm";
   const modalContentClasses = "bg-white rounded-lg w-11/12 max-w-sm shadow-xl overflow-hidden";
+  const activeBadgeClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800";
+  const inactiveBadgeClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800";
   const modalHeaderClasses = "bg-gray-100 py-4 px-5 border-b border-gray-200 flex justify-between items-center";
   const modalHeaderH2Classes = "m-0 text-lg font-semibold text-gray-800";
   const closeModalClasses = "bg-none border-none text-2xl cursor-pointer text-gray-600 hover:text-red-600";
@@ -425,8 +503,8 @@ export default function ContractorsManagement() {
               </div>
               <div className={formRowClasses}>
                 <div className={formGroupClasses}>
-                  <label htmlFor="nic_number" className={formLabelClasses}>NIC Number*</label>
-                  <input type="text" id="nic_number" name="nic_number" value={formData.nic_number} onChange={handleInputChange} required pattern="[0-9]{9}[vVxX]|[0-9]{12}" title="Enter a valid NIC number (e.g., 123456789V or 199012345678)" className={formInputBaseClasses} disabled={editMode} />
+                  <label htmlFor="contractor_nic_number" className={formLabelClasses}>NIC Number*</label>
+                  <input type="text" id="contractor_nic_number" name="contractor_nic_number" value={formData.contractor_nic_number} onChange={handleInputChange} required pattern="[0-9]{9}[vVxX]|[0-9]{12}" title="Enter a valid NIC number (e.g., 123456789V or 199012345678)" className={formInputBaseClasses} disabled={editMode} />
                    {editMode && <p className="text-xs text-gray-500 mt-1">NIC Number cannot be changed in edit mode.</p>}
                 </div>
                  <div className={formGroupClasses}>
@@ -436,8 +514,19 @@ export default function ContractorsManagement() {
                      <option value="yes">Yes</option>
                    </select>
                  </div>
+                 <div className={formGroupClasses}>
+                   <label htmlFor="is_active" className={formLabelClasses}>Status</label>
+                   <select id="is_active" name="is_active" value={formData.is_active} onChange={handleInputChange} className={formInputBaseClasses} >
+                     <option value="yes">Active</option>
+                     <option value="no">Inactive</option>
+                   </select>
+                 </div>
               </div>
                <div className={formRowClasses}>
+                 <div className={formGroupClasses}>
+                   <label htmlFor="agreement_number" className={formLabelClasses}>Agreement Number</label>
+                   <input type="text" id="agreement_number" name="agreement_number" value={formData.agreement_number} onChange={handleInputChange} className={formInputBaseClasses} />
+                 </div>
                  <div className={formGroupClasses}>
                    <label htmlFor="agreement_start_date" className={formLabelClasses}>Agreement Start Date</label>
                    <input type="date" id="agreement_start_date" name="agreement_start_date" value={formData.agreement_start_date} onChange={handleInputChange} className={formInputBaseClasses} />
@@ -504,33 +593,52 @@ export default function ContractorsManagement() {
                   <th className={tableHeaderCellClasses}>Agreement No.</th>
                   <th className={tableHeaderCellClasses}>Agreement Start Date</th>
                   <th className={tableHeaderCellClasses}>Agreement End Date</th>
-                  <th className={tableHeaderCellClasses}>Is Active</th>
+                  <th className={tableHeaderCellClasses}>Status</th>
                   <th className={tableHeaderCellClasses}>Created At</th>
                   <th className={tableHeaderCellClasses}>Updated At</th>
-                  {/* Actions column header removed */}
+                  <th className={tableHeaderCellClasses}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredContractors.map((contractor) => (
                   <tr key={contractor.nic_number} className={tableRowHoverClasses}>
-                    <td className={tableDataCellClasses}>{contractor.nic_number}</td>
+                    <td className={tableDataCellClasses}>{contractor.id || 'N/A'}</td>
                     <td className={tableDataCellClasses}>{contractor.nic_number}</td>
                     <td className={tableDataCellClasses}>{contractor.full_name}</td>
                     <td className={tableDataCellClasses}>{contractor.contact_number}</td>
                     <td className={`${tableDataCellClasses} whitespace-normal`}>{contractor.address || 'N/A'}</td>
-                    <td className={tableDataCellClasses}>{'N/A'}</td>
+                    <td className={tableDataCellClasses}>{contractor.agreement_number || 'N/A'}</td>
                     <td className={tableDataCellClasses}>{formatDate(contractor.agreement_start_date) || 'N/A'}</td>
                     <td className={tableDataCellClasses}>{formatDate(contractor.agreement_end_date) || 'N/A'}</td>
-                    <td className={tableDataCellClasses}>{'N/A'}</td>
+                    <td className={tableDataCellClasses}>
+                      <span className={contractor.is_active === 'yes' ? activeBadgeClasses : inactiveBadgeClasses}>
+                        {contractor.is_active === 'yes' ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
                     <td className={tableDataCellClasses}>{formatDate(contractor.created_at) || 'N/A'}</td>
                     <td className={tableDataCellClasses}>{formatDate(contractor.updated_at) || 'N/A'}</td>
-                    {/* Actions column data cell removed */}
+                    <td className={tableDataCellClasses}>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEdit(contractor)}
+                          className="text-yellow-500 hover:text-yellow-700"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(contractor.nic_number)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
 
                 {filteredContractors.length === 0 && (
                   <tr>
-                    <td colSpan={11} className={noDataCellClasses}> {/* Updated colSpan to 11 */}
+                    <td colSpan={12} className={noDataCellClasses}>
                       No contractors found. {searchQuery ? 'Try a different search term.' : 'Add a new contractor to get started.'}
                     </td>
                   </tr>
@@ -538,12 +646,7 @@ export default function ContractorsManagement() {
               </tbody>
             </table>
 
-            {/* Note: The Edit and Delete buttons were in the Actions column.
-                If you need to re-enable editing/deleting, you'll need to add
-                those buttons back, perhaps via a different UI element per row
-                or by reintroducing the Actions column. The handleEdit and handleDelete
-                functions still exist.
-            */}
+            {/* Delete confirmation modal */}
 
             {showDeleteConfirm && (
               <div className={modalOverlayClasses}>

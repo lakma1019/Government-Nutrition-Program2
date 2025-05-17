@@ -20,6 +20,12 @@ const defaultUsers = [
     is_active: 'yes'
   },
   {
+    username: 'dataeo1',
+    password: 'dataeo1123',
+    role: 'deo',
+    is_active: 'yes'
+  },
+  {
     username: 'vo',
     password: 'vo123',
     role: 'vo',

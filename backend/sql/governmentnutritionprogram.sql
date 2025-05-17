@@ -38,11 +38,11 @@ CREATE TABLE IF NOT EXISTS `contractors` (
   `agreement_start_date` date DEFAULT NULL,
   `agreement_end_date` date DEFAULT NULL,
   `is_active` enum('yes','no') COLLATE utf8mb4_unicode_ci DEFAULT 'yes',
+  
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `contractor_nic_number` (`contractor_nic_number`),
-  UNIQUE KEY `contractor_nic_number_2` (`contractor_nic_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -105,8 +105,7 @@ CREATE TABLE IF NOT EXISTS `deo_details` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
-  UNIQUE KEY `nic_number` (`nic_number`),
-  UNIQUE KEY `nic_number_2` (`nic_number`)
+  UNIQUE KEY `nic_number` (`nic_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -165,7 +164,6 @@ CREATE TABLE IF NOT EXISTS `supporters` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `supporter_nic_number` (`supporter_nic_number`),
   UNIQUE KEY `contractor_id` (`contractor_id`),
-  UNIQUE KEY `supporter_nic_number_2` (`supporter_nic_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -254,7 +252,6 @@ CREATE TABLE IF NOT EXISTS `vo_details` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
   UNIQUE KEY `nic_number` (`nic_number`),
-  UNIQUE KEY `nic_number_2` (`nic_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --

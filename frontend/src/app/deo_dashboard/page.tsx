@@ -94,6 +94,7 @@ export default function DataEntryOfficerDashboard() {
   const cardData = [
     { title: "Daily Data", icon: "📝", href: "/deo_dashboard/daily_data", ariaLabel: "Daily Data Entry" },
     { title: "Contractors", icon: "👥", href: "/deo_dashboard/contractors", ariaLabel: "Manage Contractors" },
+    { title: "Supporters", icon: "🤝", href: "/deo_dashboard/supporters", ariaLabel: "Manage Supporters" },
     { title: "Progress Report", icon: "📈", href: "/deo_dashboard/progress_report", ariaLabel: "Generate Progress Report" },
     { title: "Voucher", icon: "📄", href: "/deo_dashboard/voucher", ariaLabel: "Generate Voucher" },
     { title: "Reports", icon: "📊", href: "/deo_dashboard/reports", ariaLabel: "View Reports" },

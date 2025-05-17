@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Define interface for DailyData
 interface DailyData {
@@ -47,6 +48,8 @@ export default function DailyDataManagement() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [entryToDeleteId, setEntryToDeleteId] = useState<number | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, token } = useAuth();
 
   const initialFormData: DailyDataFormData = {
     date: new Date().toISOString().split('T')[0], // Default to today
@@ -68,12 +71,48 @@ export default function DailyDataManagement() {
       ? (calculatedTotal * (parseFloat(formData.unit_price) || 0))
       : 0;
 
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = () => {
+      try {
+        // Check if user is authenticated
+        if (!user || !token) {
+          router.push('/login');
+          return;
+        }
+
+        // Check if user is a data entry officer
+        if (user.role !== 'dataEntryOfficer') {
+          alert('Access denied. Only Data Entry Officers can access this page.');
+          router.push('/');
+          return;
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+        router.push('/login');
+      }
+    };
+
+    checkAuth();
+  }, [user, token, router]);
+
   const fetchDailyData = useCallback(async () => {
+    if (!token) {
+      showNotification('error', 'Authentication required. Please log in.');
+      return;
+    }
+
     try {
       setDailyEntries([]);
       setFilteredDailyEntries([]);
-      // Replace with your actual API endpoint and authentication
-      const response = await fetch('http://localhost:3001/api/daily-data?username=dataeo1&password=dataeo1123');
+
+      const response = await fetch('http://localhost:3001/api/daily-data', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
       const responseText = await response.text();
       let data;
       try {
@@ -109,11 +148,13 @@ export default function DailyDataManagement() {
       setDailyEntries([]);
       setFilteredDailyEntries([]);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    fetchDailyData();
-  }, [fetchDailyData]);
+    if (token) {
+      fetchDailyData();
+    }
+  }, [fetchDailyData, token]);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -139,7 +180,7 @@ export default function DailyDataManagement() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const showNotification = (type: 'success' | 'error' | null, message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification({ type: null, message: '' }), 5000);
@@ -194,26 +235,38 @@ export default function DailyDataManagement() {
     };
 
     try {
-      const credentials = { username: 'dataeo1', password: 'dataeo1123' }; // Add credentials
+      if (!token) {
+        showNotification('error', 'Authentication required. Please log in.');
+        return;
+      }
+
       let response;
       let responseText;
       let data;
 
       if (editMode && currentEntry?.id) {
-        const dataToUpdate = { ...entryPayload, ...credentials };
         response = await fetch(`http://localhost:3001/api/daily-data/${currentEntry.id}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataToUpdate),
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(entryPayload),
         });
       } else {
-        const dataToAdd = { ...entryPayload, ...credentials };
         response = await fetch('http://localhost:3001/api/daily-data', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataToAdd),
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(entryPayload),
         });
       }
-      
+
       responseText = await response.text();
       try { data = JSON.parse(responseText); } catch (e) { throw new Error(`Server returned invalid JSON: ${responseText}`); }
-      
+
       if (!response.ok) throw new Error(`Server returned ${response.status}: ${data.message || responseText}`);
 
       if (data.success) {
@@ -261,15 +314,29 @@ export default function DailyDataManagement() {
       showNotification('error', 'No entry selected for deletion.');
       return;
     }
+
+    if (!token) {
+      showNotification('error', 'Authentication required. Please log in.');
+      setShowDeleteConfirm(false);
+      return;
+    }
+
     setShowDeleteConfirm(false);
     try {
-      const response = await fetch(`http://localhost:3001/api/daily-data/${entryToDeleteId}?username=dataeo1&password=dataeo1123`, { method: 'DELETE' });
+      const response = await fetch(`http://localhost:3001/api/daily-data/${entryToDeleteId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
       const responseText = await response.text();
       let data;
       try { data = JSON.parse(responseText); } catch (e) { throw new Error(`Server returned invalid JSON: ${responseText}`); }
 
       if (!response.ok) throw new Error(`Server returned ${response.status}: ${data.message || responseText}`);
-      
+
       if (data.success) {
         showNotification('success', data.message || 'Entry deleted successfully!');
         fetchDailyData();
@@ -349,14 +416,7 @@ export default function DailyDataManagement() {
           <Link href="/DEO_login" className={`${navLinkBaseClasses} ${pathname === "/DEO_login" ? linkTextHighlightClasses : ""}`}>
             <span className={linkTextBaseClasses}>Dashboard</span>
           </Link>
-          {/* Update this link to point to the current page or a relevant parent */}
-          <Link href="/DEO_login/DEO_daily_data" className={`${navLinkBaseClasses} ${pathname === "/DEO_login/DEO_daily_data" ? linkTextHighlightClasses : ""}`}>
-            <span className={linkTextBaseClasses}>Daily Data</span>
-          </Link>
-          <Link href="/DEO_login/DEO_contractors" className={`${navLinkBaseClasses} ${pathname === "/DEO_login/DEO_contractors" ? linkTextHighlightClasses : ""}`}>
-            <span className={linkTextBaseClasses}>Contractors</span>
-          </Link>
-          <Link href="/login" className={navLinkBaseClasses}>
+          <Link href="/" className={navLinkBaseClasses}>
             <span className={linkTextBaseClasses}>Logout</span>
           </Link>
         </div>
@@ -457,15 +517,15 @@ export default function DailyDataManagement() {
                     Unit Price (per beneficiary)*
                     {formData.method_of_rice_received === 'donated' && <span className="text-xs text-gray-500"> (N/A for donated)</span>}
                   </label>
-                  <input 
-                    type="number" 
-                    id="unit_price" 
-                    name="unit_price" 
-                    value={formData.unit_price} 
-                    onChange={handleInputChange} 
+                  <input
+                    type="number"
+                    id="unit_price"
+                    name="unit_price"
+                    value={formData.unit_price}
+                    onChange={handleInputChange}
                     required={formData.method_of_rice_received === 'purchased'}
-                    min="0.00" 
-                    step="0.01" 
+                    min="0.00"
+                    step="0.01"
                     className={formData.method_of_rice_received === 'donated' ? readOnlyInputClasses : formInputBaseClasses}
                     readOnly={formData.method_of_rice_received === 'donated'}
                   />
@@ -475,7 +535,7 @@ export default function DailyDataManagement() {
                   <input type="number" id="amount" name="amount" value={calculatedAmount.toFixed(2)} readOnly className={readOnlyInputClasses} />
                 </div>
               </div>
-              
+
               <div className={formGroupClasses}>
                 <label htmlFor="meal_recipe" className={formLabelClasses}>Meal Recipe*</label>
                 <textarea id="meal_recipe" name="meal_recipe" value={formData.meal_recipe} onChange={handleInputChange} rows={3} required className={`${formInputBaseClasses} resize-y`} />

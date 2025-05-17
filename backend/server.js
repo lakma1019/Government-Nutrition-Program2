@@ -92,9 +92,11 @@ app.use('/api/auth', csrfProtection, require('./routes/auth'));
 app.use('/api/users', csrfProtection, require('./routes/users'));
 app.use('/api/user-details', csrfProtection, require('./routes/userDetails'));
 
-// Routes without CSRF protection (using basic auth instead)
-// We're explicitly not using CSRF for these routes as they use username/password auth
+// Routes with JWT authentication but without CSRF protection
+// These routes use JWT token authentication instead of CSRF
 app.use('/api/daily-data', require('./routes/dailyData'));
+app.use('/api/contractors', require('./routes/contractors'));
+app.use('/api/supporters', require('./routes/supporters'));
 
 // Default route
 app.get('/', (req, res) => {

@@ -16,20 +16,6 @@ const dailyDataSchema = z.object({
   fruits: z.string().nullable().optional()
 });
 
-// Schema for authentication credentials
-const credentialsSchema = z.object({
-  username: z.string().min(1, { message: 'Username is required' }),
-  password: z.string().min(1, { message: 'Password is required' })
-});
-
-// Combined schema for daily data with credentials
-const dailyDataWithCredentialsSchema = dailyDataSchema.extend({
-  username: z.string().min(1, { message: 'Username is required' }),
-  password: z.string().min(1, { message: 'Password is required' })
-});
-
 module.exports = {
-  dailyDataSchema,
-  credentialsSchema,
-  dailyDataWithCredentialsSchema
+  dailyDataSchema
 };

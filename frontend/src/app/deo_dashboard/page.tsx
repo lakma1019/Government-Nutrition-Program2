@@ -92,13 +92,13 @@ export default function DataEntryOfficerDashboard() {
   const cardTitleClasses = "text-md md:text-lg font-semibold"; // Color inherited from cardStyle
 
   const cardData = [
-    { title: "Daily Data", icon: "📝", href: "/DEO_login/enter-daily-data", ariaLabel: "Daily Data Entry" },
-    { title: "Contractors", icon: "👥", href: "/DEO_login/DEO_contractors", ariaLabel: "Manage Contractors" },
-    { title: "Progress Report", icon: "📈", href: "/DEO_login/generate_progress_report", ariaLabel: "Generate Progress Report" },
-    { title: "Voucher", icon: "📄", href: "/DEO_login/generate_voucher", ariaLabel: "Generate Voucher" },
-    { title: "Reports", icon: "📊", href: "/DEO_login/reports", ariaLabel: "View Reports" },
-    { title: "History", icon: "📜", href: "/DEO_login/history", ariaLabel: "View History" },
-    { title: "Profile", icon: "👤", href: "/DEO_login/profile", ariaLabel: "View Profile" },
+    { title: "Daily Data", icon: "📝", href: "/deo_dashboard/daily_data", ariaLabel: "Daily Data Entry" },
+    { title: "Contractors", icon: "👥", href: "/deo_dashboard/contractors", ariaLabel: "Manage Contractors" },
+    { title: "Progress Report", icon: "📈", href: "/deo_dashboard/progress_report", ariaLabel: "Generate Progress Report" },
+    { title: "Voucher", icon: "📄", href: "/deo_dashboard/voucher", ariaLabel: "Generate Voucher" },
+    { title: "Reports", icon: "📊", href: "/deo_dashboard/reports", ariaLabel: "View Reports" },
+    { title: "History", icon: "📜", href: "/deo_dashboard/history", ariaLabel: "View History" },
+    { title: "Profile", icon: "👤", href: "/deo_dashboard/profile", ariaLabel: "View Profile" },
   ];
 
   return (

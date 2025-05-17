@@ -244,49 +244,49 @@ export default function GenerateProgressReportPage() {
         <div className="w-[200px] bg-[#f8e1f4] py-5 border-r-2 border-[#0070f3] print:hidden">
           <div
             className={`flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0]`}
-            onClick={() => router.push('/DEO_login')}
+            onClick={() => router.push('/deo_dashboard')}
           >
             <div className="mr-2.5 text-xl">📝</div>
             <div>Enter Daily Data</div>
           </div>
           <div
             className={`flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0]`}
-            onClick={() => router.push('/DEO_login/DEO_contractors')}
+            onClick={() => router.push('/deo_dashboard/contractors')}
           >
             <div className="mr-2.5 text-xl">👥</div>
             <div>Contractors</div>
           </div>
           <div
             className={`flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0]`}
-            onClick={() => router.push('/DEO_login/generate_voucher')}
+            onClick={() => router.push('/deo_dashboard/voucher')}
           >
             <div className="mr-2.5 text-xl">📄</div>
             <div>Generate General 35 Voucher</div>
           </div>
           <div // This item is marked as active
             className={`flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0] bg-[#e6b3d9] font-bold`}
-            onClick={() => router.push('/DEO_login/generate_progress_report')}
+            onClick={() => router.push('/deo_dashboard/progress_report')}
           >
             <div className="mr-2.5 text-xl">📈</div>
             <div>Generate Progress Report</div>
           </div>
           <div
             className={`flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0]`}
-            onClick={() => router.push('/DEO_login')}
+            onClick={() => router.push('/deo_dashboard')}
           >
             <div className="mr-2.5 text-xl">👤</div>
             <div>View profile</div>
           </div>
           <div
             className={`flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0]`}
-            onClick={() => router.push('/DEO_login')}
+            onClick={() => router.push('/deo_dashboard')}
           >
             <div className="mr-2.5 text-xl">📊</div>
             <div>Reports</div>
           </div>
           <div
             className={`flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0]`}
-            onClick={() => router.push('/DEO_login')}
+            onClick={() => router.push('/deo_dashboard')}
           >
             <div className="mr-2.5 text-xl">📜</div>
             <div>History</div>
@@ -449,7 +449,7 @@ export default function GenerateProgressReportPage() {
             </div>
 
             <div className="flex justify-end mt-5 print:hidden">
-              <button type="button" className="py-2 px-5 bg-white border border-[#ccc] rounded cursor-pointer hover:bg-gray-100" onClick={() => router.push('/DEO_login')}>
+              <button type="button" className="py-2 px-5 bg-white border border-[#ccc] rounded cursor-pointer hover:bg-gray-100" onClick={() => router.push('/deo_dashboard')}>
                 Back
               </button>
             </div>

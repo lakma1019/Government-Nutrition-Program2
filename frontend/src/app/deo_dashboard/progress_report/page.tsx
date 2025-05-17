@@ -379,7 +379,7 @@ export default function GenerateProgressReportPage() {
             </div>
 
             <div className="flex justify-end mt-5 print:hidden">
-              <button type="button" className="py-2 px-5 bg-white border border-[#ccc] rounded cursor-pointer hover:bg-gray-100" onClick={() => router.push('/DEO_login')}>
+              <button type="button" className="py-2 px-5 bg-white border border-[#ccc] rounded cursor-pointer hover:bg-gray-100" onClick={() => router.push('/deo_dashboard')}>
                 Back
               </button>
             </div>

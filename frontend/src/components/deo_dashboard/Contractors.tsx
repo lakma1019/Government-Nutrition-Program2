@@ -598,13 +598,13 @@ export default function ContractorsManagement() {
       <nav className={navbarClasses}>
         <div className={brandClasses}>Government Nutrition Program</div>
         <div className={navLinksClasses}>
-          <Link href="/DEO_login" className={`${navLinkBaseClasses} ${pathname === "/DEO_login" ? linkTextHighlightClasses : ""}`}>
+          <Link href="/deo_dashboard" className={`${navLinkBaseClasses} ${pathname === "/deo_dashboard" ? linkTextHighlightClasses : ""}`}>
             <span className={linkTextBaseClasses}>Dashboard</span>
           </Link>
-          <Link href="/DEO_login/DEO_contractors" className={`${navLinkBaseClasses} ${pathname === "/DEO_login/DEO_contractors" ? linkTextHighlightClasses : ""}`}>
+          <Link href="/deo_dashboard/contractors" className={`${navLinkBaseClasses} ${pathname === "/deo_dashboard/contractors" ? linkTextHighlightClasses : ""}`}>
             <span className={linkTextBaseClasses}>Contractors</span>
           </Link>
-          <Link href="/login" className={navLinkBaseClasses}>
+          <Link href="/" className={navLinkBaseClasses}>
             <span className={linkTextBaseClasses}>Logout</span>
           </Link>
         </div>
@@ -888,7 +888,7 @@ export default function ContractorsManagement() {
                   </td>
                   <td className={actionsCellClasses}> {/* Use flex and gap for action buttons */}
                     {/* View Agreement Details Link */}
-                    <Link href={`/DEO_login/DEO_contractors/${contractor.nic_number}`} className={actionButtonViewClasses}> {/* Updated link path */}
+                    <Link href={`/deo_dashboard/contractors/${contractor.nic_number}`} className={actionButtonViewClasses}> {/* Updated link path */}
                       Agreement Details
                     </Link>
                     {/* Edit Button */}

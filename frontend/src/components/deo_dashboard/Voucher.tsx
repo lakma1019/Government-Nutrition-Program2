@@ -199,14 +199,13 @@ export default function GenerateVoucherPage() {
       <nav className={navbarClasses}>
         <div className={brandClasses}>Government Nutrition Program</div>
         <div className={navLinksClasses}>
-          <Link href="/DEO_login" className={`${navLinkBaseClasses} ${pathname === "/DEO_login" ? linkTextHighlightClasses : ""}`}>
+          <Link href="/deo_dashboard" className={`${navLinkBaseClasses} ${pathname === "/deo_dashboard" ? linkTextHighlightClasses : ""}`}>
             <span className={linkTextBaseClasses}>Dashboard</span>
           </Link>
-          <Link href="/DEO_login/DEO_contractors" className={`${navLinkBaseClasses} ${pathname === "/DEO_login/DEO_contractors" ? linkTextHighlightClasses : ""}`}>
+          <Link href="/deo_dashboard/contractors" className={`${navLinkBaseClasses} ${pathname === "/deo_dashboard/contractors" ? linkTextHighlightClasses : ""}`}>
             <span className={linkTextBaseClasses}>Contractors</span>
           </Link>
-          {/* Assuming logout link goes to login page */}
-          <Link href="/login" className={navLinkBaseClasses}>
+          <Link href="/" className={navLinkBaseClasses}>
             <span className={linkTextBaseClasses}>Logout</span>
           </Link>
         </div>
@@ -223,28 +222,28 @@ export default function GenerateVoucherPage() {
         <div className={sidebarClasses}>
           <div
             className={sidebarItemClasses} // No active class initially as this page is active
-            onClick={() => router.push('/DEO_login')}
+            onClick={() => router.push('/deo_dashboard')}
           >
             <div className={sidebarIconClasses}>📝</div>
             <div className={sidebarTextClasses}>Enter Daily Data</div>
           </div>
           <div
             className={sidebarItemClasses}
-            onClick={() => router.push('/DEO_login/DEO_contractors')}
+            onClick={() => router.push('/deo_dashboard/contractors')}
           >
             <div className={sidebarIconClasses}>👥</div>
             <div className={sidebarTextClasses}>Contractors</div>
           </div>
           <div
             className={`${sidebarItemClasses} ${sidebarItemActiveClass}`} // This item is active on this page
-            onClick={() => router.push('/DEO_login/generate_voucher')}
+            onClick={() => router.push('/deo_dashboard/generate_voucher')}
           >
             <div className={sidebarIconClasses}>📄</div>
             <div className={sidebarTextClasses}>Generate General 35 Voucher</div>
           </div>
           <div
             className={sidebarItemClasses}
-            onClick={() => router.push('/DEO_login/generate_progress_report')}
+            onClick={() => router.push('/deo_dashboard/generate_progress_report')}
           >
             <div className={sidebarIconClasses}>📈</div>
             <div className={sidebarTextClasses}>Generate Progress Report</div>
@@ -252,21 +251,21 @@ export default function GenerateVoucherPage() {
            {/* Assuming these links go to placeholder or same dashboard page */}
           <div
             className={sidebarItemClasses}
-            onClick={() => router.push('/DEO_login?tab=viewProfile')} // Example: use query param
+            onClick={() => router.push('/deo_dashboard?tab=viewProfile')} // Example: use query param
           >
             <div className={sidebarIconClasses}>👤</div>
             <div className={sidebarTextClasses}>View profile</div>
           </div>
           <div
             className={sidebarItemClasses}
-             onClick={() => router.push('/DEO_login?tab=reports')} // Example: use query param
+             onClick={() => router.push('/deo_dashboard?tab=reports')} // Example: use query param
           >
             <div className={sidebarIconClasses}>📊</div>
             <div className={sidebarTextClasses}>Reports</div>
           </div>
           <div
             className={sidebarItemClasses}
-             onClick={() => router.push('/DEO_login?tab=history')} // Example: use query param
+             onClick={() => router.push('/deo_dashboard?tab=history')} // Example: use query param
           >
             <div className={sidebarIconClasses}>📜</div>
             <div className={sidebarTextClasses}>History</div>

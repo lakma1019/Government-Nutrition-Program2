@@ -13,6 +13,74 @@ const hasPermission = (req, userId) => {
   return req.user.id === parseInt(userId);
 };
 
+// @route   GET /api/user-details/active/deo
+// @desc    Get active DEO user details
+// @access  Public
+router.get('/active/deo', async (req, res) => {
+  try {
+    // Get active DEO user
+    const [activeUsers] = await pool.query(`
+      SELECT u.id, u.username, u.role, u.is_active, d.full_name, d.nic_number, d.tel_number, d.address
+      FROM users u
+      JOIN deo_details d ON u.id = d.user_id
+      WHERE u.role = 'deo' AND u.is_active = 'yes' AND d.is_active = 'yes'
+      LIMIT 1
+    `);
+
+    if (activeUsers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active DEO found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: activeUsers[0]
+    });
+  } catch (err) {
+    console.error('Error getting active DEO:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   GET /api/user-details/active/vo
+// @desc    Get active VO user details
+// @access  Public
+router.get('/active/vo', async (req, res) => {
+  try {
+    // Get active VO user
+    const [activeUsers] = await pool.query(`
+      SELECT u.id, u.username, u.role, u.is_active, v.full_name, v.nic_number, v.tel_number, v.address
+      FROM users u
+      JOIN vo_details v ON u.id = v.user_id
+      WHERE u.role = 'vo' AND u.is_active = 'yes' AND v.is_active = 'yes'
+      LIMIT 1
+    `);
+
+    if (activeUsers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active VO found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: activeUsers[0]
+    });
+  } catch (err) {
+    console.error('Error getting active VO:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // Validation schemas
 const deoDetailsSchema = z.object({
   user_id: z.number().int().positive(),

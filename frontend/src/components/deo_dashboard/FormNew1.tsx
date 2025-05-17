@@ -1,7 +1,141 @@
 // components/FormNew1.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const FormNew1: React.FC = () => {
+  // State for auto-filled fields
+  const [debitParticulars, setDebitParticulars] = useState('');
+  const [payableTo, setPayableTo] = useState('');
+  const [authorityDescription, setAuthorityDescription] = useState('');
+  const [preparedBy, setPreparedBy] = useState('');
+  const [checkedBy, setCheckedBy] = useState('');
+
+  // Function to get current month and year
+  const getCurrentMonthYear = () => {
+    const date = new Date();
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    return `${month} ${year}`;
+  };
+
+  // Function to fetch active contractor
+  const fetchActiveContractor = async () => {
+    try {
+      // Get the token from localStorage
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) {
+        console.error('Authentication required');
+        return;
+      }
+
+      const userData = JSON.parse(storedUser);
+      const token = userData.token;
+
+      if (!token) {
+        console.error('Authentication token not found');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/api/contractors/active', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 404) {
+        // No active contractor found, use a default value
+        setPayableTo("No Active Supplier");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch active contractor: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setPayableTo(result.data.full_name);
+      } else {
+        throw new Error(result.message || 'Failed to fetch active contractor');
+      }
+    } catch (err) {
+      console.error('Error fetching active contractor:', err);
+      setPayableTo("Unknown Supplier");
+    }
+  };
+
+  // Function to fetch active DEO
+  const fetchActiveDEO = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/user-details/active/deo');
+
+      if (response.status === 404) {
+        setPreparedBy("No Active DEO");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch active DEO: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setPreparedBy(result.data.full_name);
+      } else {
+        throw new Error(result.message || 'Failed to fetch active DEO');
+      }
+    } catch (err) {
+      console.error('Error fetching active DEO:', err);
+      setPreparedBy("Unknown DEO");
+    }
+  };
+
+  // Function to fetch active VO
+  const fetchActiveVO = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/user-details/active/vo');
+
+      if (response.status === 404) {
+        setCheckedBy("No Active VO");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch active VO: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setCheckedBy(result.data.full_name);
+      } else {
+        throw new Error(result.message || 'Failed to fetch active VO');
+      }
+    } catch (err) {
+      console.error('Error fetching active VO:', err);
+      setCheckedBy("Unknown VO");
+    }
+  };
+
+  // Set up auto-filling on component mount
+  useEffect(() => {
+    // Set debit particulars and authority description
+    const monthYear = getCurrentMonthYear();
+    const nutritionText = `Nutritional Cost of ${monthYear}`;
+    setDebitParticulars(nutritionText);
+    setAuthorityDescription(nutritionText);
+
+    // Fetch data for other fields
+    fetchActiveContractor();
+    fetchActiveDEO();
+    fetchActiveVO();
+  }, []);
   return (
     <>
       <div className="form-container">
@@ -19,7 +153,7 @@ const FormNew1: React.FC = () => {
                             <span className="ref-label tamil-text">வவுச்சர் இல</span>
                             <span className="ref-label english-text">Voucher No.</span>
                         </div>
-                        <span className="ref-brace">}</span>
+                        <span className="ref-brace">{'}'}</span>
                         <input type="text" className="ref-box" />
                     </div>
                     <div className="ref-item">
@@ -28,7 +162,7 @@ const FormNew1: React.FC = () => {
                             <span className="ref-label tamil-text">காசோலை இல</span>
                             <span className="ref-label english-text">Cheque No.</span>
                         </div>
-                        <span className="ref-brace">}</span>
+                        <span className="ref-brace">{'}'}</span>
                         <input type="text" className="ref-box" />
                     </div>
                     <div className="ref-item general-ref-item">
@@ -37,7 +171,7 @@ const FormNew1: React.FC = () => {
                             <span className="tamil-text">பொது</span>
                             <span className="english-text">General</span>
                         </div>
-                        <span className="ref-brace">}</span>
+                        <span className="ref-brace">{'}'}</span>
                         <input type="text" className="ref-value" defaultValue="35" />
                     </div>
                 </div>
@@ -61,11 +195,11 @@ const FormNew1: React.FC = () => {
             <div className="detail-line">
                 <span className="label sinhala-text">වැය විස්තරය</span><span className="label tamil-text">/செலவு
                     விபரம்</span><span className="label english-text">/Debit Particulars :</span>
-                <input type="text" className="input-line" />
+                <input type="text" className="input-line" value={debitParticulars} onChange={(e) => setDebitParticulars(e.target.value)} />
             </div>
             <div className="detail-line">
                 <span className="label english-text">PAYABLE TO :</span>
-                <input type="text" className="input-line" />
+                <input type="text" className="input-line" value={payableTo} onChange={(e) => setPayableTo(e.target.value)} />
                 <span className="suffix-text sinhala-text">ට ගෙවිය යුතුය</span><span className="suffix-text tamil-text">/செலுத்த
                     வேண்டும்.</span>
             </div>
@@ -116,8 +250,9 @@ const FormNew1: React.FC = () => {
                     <tr className="authority-row">
                         <td className="input-cell"><input type="text" className="table-input" placeholder="Date" /></td>
                         <td className="authority-text-cell">
-                            <input type="text" className="input-line authority-description-line"
-                                placeholder="Enter authority details here..." />
+                            <input type="text" className="input-line"
+                                value={authorityDescription}
+                                onChange={(e) => setAuthorityDescription(e.target.value)} />
                             <div className="payment-authority-text-block">
                                 <p className="sinhala-text">ගෙවීමට ඇති බලය සහ ගොනු සම්බන්ධය</p>
                                 <p className="tamil-text">கொடுப்பனவுக்கு உரிய அதிகாரமும் கோவை விபரமும்</p>
@@ -132,13 +267,13 @@ const FormNew1: React.FC = () => {
                         <td colSpan={2} className="preparation-cell">
                             <div className="prep-line">
                                 <span className="label english-text">Prepared by:</span>
-                                <input type="text" className="input-line" />
+                                <input type="text" className="input-line" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} />
                                 <span className="annotation sinhala-text">විසින් සකස් කරන ලදී </span><span
                                     className="annotation tamil-text">/ ஆல் தயாரிக்கப் பெற்றது.</span>
                             </div>
                             <div className="prep-line">
                                 <span className="label english-text">Checked by:</span>
-                                <input type="text" className="input-line" />
+                                <input type="text" className="input-line" value={checkedBy} onChange={(e) => setCheckedBy(e.target.value)} />
                                 <span className="annotation sinhala-text">විසින් පරීක්ෂා කරන ලදී </span><span
                                     className="annotation tamil-text">/ ஆல் பரிசோதிக்கப் பெற்றது.</span>
                             </div>
@@ -390,14 +525,14 @@ const FormNew1: React.FC = () => {
             min-width: 30px;
             vertical-align: baseline;
             background-color: var(--background-color);
-            border: 1px solid var(--border-color);
-            padding: calc(var(--spacing-unit) / 2);
+            padding: calc(var(--spacing-unit));
+            margin: calc(var(--spacing-unit));
             font-family: inherit;
             font-size: inherit;
             color: inherit;
             box-sizing: border-box;
             height: calc(var(--font-size-normal) + var(--spacing-unit) + 2px);
-            line-height: normal;
+            line-height: 150%;
         }
 
         .station-details {

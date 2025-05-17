@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { processElementStyles } from '@/lib/colorUtils';
 
 export default function GenerateProgressReportPage() {
   const [user, setUser] = useState<{id?: number; username?: string; role?: string} | null>(null);
@@ -186,88 +187,12 @@ export default function GenerateProgressReportPage() {
       // Clone the element to avoid modifying the original DOM
       const element = reportContentRef.current.cloneNode(true) as HTMLElement;
 
-      // Replace oklch colors with standard colors
+      // Process the element to replace OKLCH colors with HEX equivalents
       const replaceOklchColors = (element: HTMLElement) => {
-        // Define fallback colors for common oklch values
-        const colorMap: Record<string, string> = {
-          // Background and foreground colors
-          'oklch(1 0 0)': '#ffffff', // white
-          'oklch(0.147 0.004 49.25)': '#262626', // dark gray
-          'oklch(0.985 0.001 106.423)': '#fafafa', // off-white
+        // Use our utility function to process all OKLCH colors
+        processElementStyles(element);
 
-          // Button colors
-          'oklch(0.577 0.245 27.325)': '#e53e3e', // red
-          'oklch(0.704 0.191 22.216)': '#f56565', // lighter red
-
-          // Common colors
-          'oklch(0.488 0.243 264.376)': '#4f46e5', // indigo
-          'oklch(0.627 0.265 303.9)': '#9333ea', // purple
-          'oklch(0.645 0.246 16.439)': '#e11d48', // rose
-
-          // Default fallback
-          'oklch': '#000000' // black
-        };
-
-        // Process all elements with inline styles
-        const allElements = element.querySelectorAll('*');
-        allElements.forEach(el => {
-          if (el instanceof HTMLElement && el.style) {
-            // Check for oklch in background or color properties
-            const style = el.getAttribute('style');
-            if (style && style.includes('oklch')) {
-              let newStyle = style;
-
-              // Replace all oklch instances with their fallbacks
-              Object.keys(colorMap).forEach(oklchColor => {
-                newStyle = newStyle.replace(new RegExp(oklchColor, 'g'), colorMap[oklchColor]);
-              });
-
-              el.setAttribute('style', newStyle);
-            }
-
-            // Apply computed styles directly to elements to avoid CSS variables
-            try {
-              const computedStyle = window.getComputedStyle(el);
-
-              // Set default styles regardless of oklch to ensure consistent rendering
-              el.style.color = computedStyle.color || '#000000';
-              el.style.backgroundColor = computedStyle.backgroundColor || 'transparent';
-              el.style.borderColor = computedStyle.borderColor || '#cccccc';
-
-              // Force override any problematic colors
-              if (el.style.color.includes('oklch')) {
-                el.style.color = '#000000'; // Default to black
-              }
-
-              if (el.style.backgroundColor.includes('oklch')) {
-                el.style.backgroundColor = 'transparent';
-              }
-
-              if (el.style.borderColor.includes('oklch')) {
-                el.style.borderColor = '#cccccc'; // Default to light gray
-              }
-            } catch (err) {
-              // Fallback to default styles if there's an error
-              el.style.color = '#000000';
-              el.style.backgroundColor = 'transparent';
-              el.style.borderColor = '#cccccc';
-            }
-          }
-        });
-
-        // Also check for CSS variables in the style attribute
-        const elementsWithVars = element.querySelectorAll('[style*="var(--"]');
-        elementsWithVars.forEach(el => {
-          if (el instanceof HTMLElement) {
-            // Replace CSS variables with direct colors
-            const computedStyle = window.getComputedStyle(el);
-            el.style.color = computedStyle.color;
-            el.style.backgroundColor = computedStyle.backgroundColor;
-            el.style.borderColor = computedStyle.borderColor;
-          }
-        });
-
-        // Add inline styles for specific elements that might use CSS variables
+        // Add additional inline styles for specific elements
         const addInlineStyles = () => {
           // Set explicit colors for the report content
           if (element.classList.contains('bg-white')) {

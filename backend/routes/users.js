@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
-const { auth, admin } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 // @route   GET /api/users
 // @desc    Get all users
-// @access  Private (Admin only)
-router.get('/', auth, admin, async (req, res) => {
+// @access  Private (Authentication required)
+router.get('/', auth, async (req, res) => {
   try {
     // Get all users from database
     const [users] = await pool.query('SELECT * FROM users');
@@ -27,8 +27,8 @@ router.get('/', auth, admin, async (req, res) => {
 
 // @route   GET /api/users/:id
 // @desc    Get user by ID
-// @access  Private (Admin only)
-router.get('/:id', auth, admin, async (req, res) => {
+// @access  Private (Authentication required)
+router.get('/:id', auth, async (req, res) => {
   try {
     // Find user by id
     const [users] = await pool.query(
@@ -51,9 +51,16 @@ router.get('/:id', auth, admin, async (req, res) => {
 
 // @route   PUT /api/users/:id
 // @desc    Update user
-// @access  Private (Admin only)
-router.put('/:id', auth, admin, async (req, res) => {
+// @access  Private (Authentication required)
+router.put('/:id', auth, async (req, res) => {
   try {
+    // Check if user is admin or updating their own account
+    if (req.user.role !== 'admin' && req.user.id !== parseInt(req.params.id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only update your own account unless you are an admin.'
+      });
+    }
     console.log('User update request received for ID:', req.params.id);
     console.log('Request body:', JSON.stringify(req.body));
 
@@ -190,8 +197,15 @@ router.put('/:id', auth, admin, async (req, res) => {
 // @route   DELETE /api/users/:id
 // @desc    Delete user
 // @access  Private (Admin only)
-router.delete('/:id', auth, admin, async (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
+    // Only admins can delete users
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only administrators can delete users.'
+      });
+    }
     // Check if user exists
     const [existingUsers] = await pool.query(
       'SELECT * FROM users WHERE id = ?',

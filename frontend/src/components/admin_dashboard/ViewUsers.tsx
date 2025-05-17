@@ -18,6 +18,32 @@ interface User {
   created_at?: string;
 }
 
+// Define DEO details type
+interface DEODetails {
+  id: number;
+  user_id: number;
+  full_name: string;
+  nic_number: string;
+  tel_number: string;
+  address: string;
+  is_active: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Define VO details type
+interface VODetails {
+  id: number;
+  user_id: number;
+  full_name: string;
+  nic_number: string;
+  tel_number: string;
+  address: string;
+  is_active: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ViewUsersComponent() {
   // State for users list
   const [users, setUsers] = useState<User[]>([]);
@@ -28,6 +54,14 @@ export default function ViewUsersComponent() {
 
   // State for selected user
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // State for role-specific details
+  const [deoDetails, setDeoDetails] = useState<DEODetails | null>(null);
+  const [voDetails, setVoDetails] = useState<VODetails | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Get current user from auth context
+  const { user: currentUser } = useAuth();
 
   // Filter options
   const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -43,7 +77,13 @@ export default function ViewUsersComponent() {
 
   // Update filtered users when search query or filters change
   useEffect(() => {
+    // Start with all users
     let filtered = [...users];
+
+    // If not admin, only show the current user
+    if (currentUser && currentUser.role !== 'admin') {
+      filtered = filtered.filter(user => user.id === currentUser.id);
+    }
 
     // Apply search filter
     if (searchQuery.trim() !== '') {
@@ -65,7 +105,7 @@ export default function ViewUsersComponent() {
     }
 
     setFilteredUsers(filtered);
-  }, [searchQuery, roleFilter, statusFilter, users]);
+  }, [searchQuery, roleFilter, statusFilter, users, currentUser]);
 
   // Fetch users from API with CSRF protection
   const fetchUsers = async () => {
@@ -105,9 +145,56 @@ export default function ViewUsersComponent() {
     }
   };
 
+  // Fetch role-specific details
+  const fetchRoleSpecificDetails = async (user: User) => {
+    if (!user) return;
+
+    // Reset details
+    setDeoDetails(null);
+    setVoDetails(null);
+
+    // Only fetch details for DEO or VO roles
+    if (user.role !== 'deo' && user.role !== 'vo') return;
+
+    setLoadingDetails(true);
+
+    try {
+      const endpoint = user.role === 'deo'
+        ? `http://localhost:3001/api/user-details/deo/${user.id}`
+        : `http://localhost:3001/api/user-details/vo/${user.id}`;
+
+      const response = await fetchWithCSRF(endpoint, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        // If 404, it means details don't exist yet, which is fine
+        if (response.status !== 404) {
+          console.error(`Failed to fetch ${user.role.toUpperCase()} details: ${response.status}`);
+        }
+        return;
+      }
+
+      const data = await response.json();
+
+      if (user.role === 'deo') {
+        setDeoDetails(data.userDetails.deoDetails);
+      } else if (user.role === 'vo') {
+        setVoDetails(data.userDetails.voDetails);
+      }
+    } catch (err) {
+      console.error(`Error fetching ${user.role.toUpperCase()} details:`, err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   // Handle selecting a user to view
   const handleSelectUser = (user: User) => {
     setSelectedUser(user);
+    fetchRoleSpecificDetails(user);
   };
 
   // Sanitize input to prevent XSS attacks
@@ -373,6 +460,129 @@ export default function ViewUsersComponent() {
                   </div>
                 </div>
               </div>
+
+              {/* Role-specific details */}
+              {selectedUser.role === 'deo' && (
+                <div className="mt-6 pt-4 border-t">
+                  <h3 className="text-lg font-semibold mb-4">Data Entry Officer Details</h3>
+
+                  {loadingDetails ? (
+                    <div className="p-4 text-blue-700">Loading DEO details...</div>
+                  ) : deoDetails ? (
+                    <div className="space-y-4">
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Full Name</div>
+                        <div className={detailValueClasses}>{deoDetails.full_name}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>NIC Number</div>
+                        <div className={detailValueClasses}>{deoDetails.nic_number || 'Not provided'}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Telephone Number</div>
+                        <div className={detailValueClasses}>{deoDetails.tel_number || 'Not provided'}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Address</div>
+                        <div className={detailValueClasses}>{deoDetails.address || 'Not provided'}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Status</div>
+                        <div className="mt-1">
+                          {deoDetails.is_active === 'yes'
+                            ? <span className={activeBadgeClasses}>Active</span>
+                            : <span className={inactiveBadgeClasses}>Inactive</span>
+                          }
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <Link
+                          href={`/admin_dashboard/edit_users/deo_details/${selectedUser.id}`}
+                          className="text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          Edit DEO Details
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-md">
+                      <p>No DEO details found for this user.</p>
+                      <Link
+                        href={`/admin_dashboard/edit_users/deo_details/${selectedUser.id}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium block mt-2"
+                      >
+                        Add DEO Details
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedUser.role === 'vo' && (
+                <div className="mt-6 pt-4 border-t">
+                  <h3 className="text-lg font-semibold mb-4">Verification Officer Details</h3>
+
+                  {loadingDetails ? (
+                    <div className="p-4 text-blue-700">Loading VO details...</div>
+                  ) : voDetails ? (
+                    <div className="space-y-4">
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Full Name</div>
+                        <div className={detailValueClasses}>{voDetails.full_name}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>NIC Number</div>
+                        <div className={detailValueClasses}>{voDetails.nic_number || 'Not provided'}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Telephone Number</div>
+                        <div className={detailValueClasses}>{voDetails.tel_number || 'Not provided'}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Address</div>
+                        <div className={detailValueClasses}>{voDetails.address || 'Not provided'}</div>
+                      </div>
+
+                      <div className={detailItemClasses}>
+                        <div className={detailLabelClasses}>Status</div>
+                        <div className="mt-1">
+                          {voDetails.is_active === 'yes'
+                            ? <span className={activeBadgeClasses}>Active</span>
+                            : <span className={inactiveBadgeClasses}>Inactive</span>
+                          }
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <Link
+                          href={`/admin_dashboard/edit_users/vo_details/${selectedUser.id}`}
+                          className="text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          Edit VO Details
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-md">
+                      <p>No VO details found for this user.</p>
+                      <Link
+                        href={`/admin_dashboard/edit_users/vo_details/${selectedUser.id}`}
+                        className="text-blue-600 hover:text-blue-800 font-medium block mt-2"
+                      >
+                        Add VO Details
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Created Date */}
               <div className="mt-6 pt-4 border-t">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { deoDetailsSchema, type DEODetailsFormData } from '@/schemas/userDetailsForm';
 import { ZodError } from 'zod';
 import { useFetchWithCSRF } from '@/hooks/useFetchWithCSRF';
@@ -9,10 +9,12 @@ interface DEODetailsFormProps {
   userId: number;
   onSuccess: () => void;
   onCancel: () => void;
+  mode?: 'add' | 'edit'; // Default is 'add'
 }
 
-export default function DEODetailsForm({ userId, onSuccess, onCancel }: DEODetailsFormProps) {
+export default function DEODetailsForm({ userId, onSuccess, onCancel, mode = 'add' }: DEODetailsFormProps) {
   const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(mode === 'edit');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { fetchWithCSRF, loading: csrfLoading } = useFetchWithCSRF();
@@ -26,6 +28,59 @@ export default function DEODetailsForm({ userId, onSuccess, onCancel }: DEODetai
     address: '',
     isActive: 'yes' // Default status
   });
+
+  // Fetch existing details if in edit mode
+  useEffect(() => {
+    if (mode === 'edit') {
+      fetchDEODetails();
+    }
+  }, [userId, mode]);
+
+  // Function to fetch DEO details
+  const fetchDEODetails = async () => {
+    setFetchLoading(true);
+    setError(null);
+
+    try {
+      // Get auth token
+      const authToken = localStorage.getItem('token');
+
+      // Fetch DEO details
+      const response = await fetch(`http://localhost:3001/api/user-details/deo/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? {
+            'Authorization': `Bearer ${authToken}`,
+            'x-auth-token': authToken
+          } : {})
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Set form data with existing details
+        const deoDetails = data.userDetails.deoDetails;
+        setFormData({
+          userId: userId,
+          fullName: deoDetails.full_name || '',
+          nicNumber: deoDetails.nic_number || '',
+          telNumber: deoDetails.tel_number || '',
+          address: deoDetails.address || '',
+          isActive: deoDetails.is_active || 'yes'
+        });
+      } else {
+        // If details not found but we're in edit mode, show error
+        setError(data.message || 'Failed to fetch DEO details');
+      }
+    } catch (err) {
+      console.error('Error fetching DEO details:', err);
+      setError('An unexpected error occurred while fetching details.');
+    } finally {
+      setFetchLoading(false);
+    }
+  };
 
   // Form validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -154,9 +209,16 @@ export default function DEODetailsForm({ userId, onSuccess, onCancel }: DEODetai
       // Get auth token
       const authToken = localStorage.getItem('token');
 
-      // Send POST request to the DEO details API endpoint with CSRF protection
-      const response = await fetchWithCSRF('http://localhost:3001/api/user-details/deo', {
-        method: 'POST',
+      // Determine the API endpoint and method based on mode
+      const url = mode === 'edit'
+        ? `http://localhost:3001/api/user-details/deo/${userId}`
+        : 'http://localhost:3001/api/user-details/deo';
+
+      const method = mode === 'edit' ? 'PUT' : 'POST';
+
+      // Send request to the DEO details API endpoint with CSRF protection
+      const response = await fetchWithCSRF(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           // Add auth token directly to headers as well
@@ -216,12 +278,21 @@ export default function DEODetailsForm({ userId, onSuccess, onCancel }: DEODetai
 
   return (
     <div className={containerClasses}>
-      <h1 className={headerClasses}>Add Data Entry Officer Details</h1>
+      <h1 className={headerClasses}>
+        {mode === 'edit' ? 'Edit Data Entry Officer Details' : 'Add Data Entry Officer Details'}
+      </h1>
+
+      {/* Loading Message */}
+      {fetchLoading && (
+        <div className="p-4 mb-4 text-sm text-blue-700 bg-blue-100 rounded-lg">
+          Loading details...
+        </div>
+      )}
 
       {/* Success Message */}
       {success && (
         <div className={alertSuccessClasses}>
-          DEO details added successfully!
+          DEO details {mode === 'edit' ? 'updated' : 'added'} successfully!
         </div>
       )}
 
@@ -342,9 +413,9 @@ export default function DEODetailsForm({ userId, onSuccess, onCancel }: DEODetai
           <button
             type="submit"
             className={loading ? disabledButtonClasses : buttonClasses}
-            disabled={loading}
+            disabled={loading || fetchLoading}
           >
-            {loading ? 'Saving...' : 'Save Details'}
+            {loading ? 'Saving...' : mode === 'edit' ? 'Update Details' : 'Save Details'}
           </button>
           <button
             type="button"

@@ -23,6 +23,9 @@ export default function EditUsersComponent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get current user from auth context
+  const { user: currentUser } = useAuth();
+
   // State for selected user and edit form
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<EditUserFormData>({
@@ -48,19 +51,26 @@ export default function EditUsersComponent() {
     fetchUsers();
   }, []);
 
-  // Update filtered users when search query changes
+  // Update filtered users when search query changes or when users list changes
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredUsers(users);
-    } else {
+    // If not admin, only show the current user
+    let filtered = [...users];
+
+    if (currentUser && currentUser.role !== 'admin') {
+      filtered = users.filter(user => user.id === currentUser.id);
+    }
+
+    // Apply search filter
+    if (searchQuery.trim() !== '') {
       const lowercaseQuery = searchQuery.toLowerCase();
-      const filtered = users.filter(user =>
+      filtered = filtered.filter(user =>
         user.username.toLowerCase().includes(lowercaseQuery) ||
         user.role.toLowerCase().includes(lowercaseQuery)
       );
-      setFilteredUsers(filtered);
     }
-  }, [searchQuery, users]);
+
+    setFilteredUsers(filtered);
+  }, [searchQuery, users, currentUser]);
 
   // Fetch users from API with CSRF protection
   const fetchUsers = async () => {
@@ -571,6 +581,25 @@ export default function EditUsersComponent() {
                 >
                   {loading ? 'Updating User...' : 'Update User'}
                 </button>
+
+                {/* Role-specific detail buttons */}
+                {selectedUser && selectedUser.role === 'deo' && (
+                  <Link
+                    href={`/admin_dashboard/edit_users/deo_details/${selectedUser.id}`}
+                    className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Edit DEO Details
+                  </Link>
+                )}
+
+                {selectedUser && selectedUser.role === 'vo' && (
+                  <Link
+                    href={`/admin_dashboard/edit_users/vo_details/${selectedUser.id}`}
+                    className="mt-4 inline-block px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors"
+                  >
+                    Edit VO Details
+                  </Link>
+                )}
               </form>
             </>
           ) : (

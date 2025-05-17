@@ -8,7 +8,7 @@ export default function EditUsersPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // Check if user is authenticated and is an admin on component mount
+  // Check if user is authenticated on component mount
   useEffect(() => {
     const checkAuth = () => {
       try {
@@ -18,13 +18,9 @@ export default function EditUsersPage() {
           return;
         }
 
+        // User is authenticated, no need to check for admin role anymore
         const userData = JSON.parse(storedUser);
-
-        // Check if user is an admin role
-        if (userData.role !== 'admin') {
-          alert('Access denied. Only administrators can access this page.');
-          router.push('/'); // Redirect to home or another page if not admin
-        }
+        console.log('User authenticated:', userData.username);
       } catch (error) {
         console.error('Authentication error:', error);
         router.push('/login'); // Redirect to login on auth error

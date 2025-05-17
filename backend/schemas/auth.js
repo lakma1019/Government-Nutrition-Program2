@@ -6,6 +6,13 @@ const loginSchema = z.object({
   password: z.string().min(1, { message: 'Password is required' })
 });
 
+// Password reset schema
+const passwordResetSchema = z.object({
+  username: z.string().min(1, { message: 'Username is required' }),
+  oldPassword: z.string().min(1, { message: 'Current password is required' }),
+  newPassword: z.string().min(6, { message: 'New password must be at least 6 characters' })
+});
+
 // User schema for registration and updates
 const userSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
@@ -50,6 +57,7 @@ const mapFrontendRoleToDb = (frontendRole) => {
 
 module.exports = {
   loginSchema,
+  passwordResetSchema,
   userSchema,
   mapDbRoleToFrontend,
   mapFrontendRoleToDb

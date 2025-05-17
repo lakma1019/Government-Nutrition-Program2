@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const { auth } = require('../middleware/auth');
-const { loginSchema, userSchema, mapDbRoleToFrontend } = require('../schemas/auth');
+const { loginSchema, passwordResetSchema, userSchema, mapDbRoleToFrontend } = require('../schemas/auth');
 
 // @route   POST /api/auth/register
 // @desc    Register a user
@@ -245,6 +245,75 @@ router.post('/refresh-token', auth, async (req, res) => {
     );
   } catch (err) {
     console.error('Error refreshing token:', err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/reset-password
+// @desc    Reset user password
+// @access  Public
+router.post('/reset-password', async (req, res) => {
+  try {
+    // Validate request body against schema
+    const validationResult = passwordResetSchema.safeParse(req.body);
+
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: validationResult.error.errors
+      });
+    }
+
+    const { username, oldPassword, newPassword } = validationResult.data;
+
+    // Find user
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE username = ?',
+      [username]
+    );
+
+    if (users.length === 0) {
+      return res.status(400).json({ success: false, message: 'User not found' });
+    }
+
+    const user = users[0];
+
+    // Check if user is active
+    if (user.is_active === 'no') {
+      return res.status(400).json({ success: false, message: 'Account is inactive' });
+    }
+
+    // Check if user is DEO or VO
+    if (user.role !== 'deo' && user.role !== 'vo') {
+      return res.status(400).json({
+        success: false,
+        message: 'Password reset is only available for Data Entry Officers and Verification Officers'
+      });
+    }
+
+    // Verify old password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password in database
+    await pool.query(
+      'UPDATE users SET password = ? WHERE id = ?',
+      [hashedPassword, user.id]
+    );
+
+    // Return success response
+    res.json({
+      success: true,
+      message: 'Password reset successful'
+    });
+  } catch (err) {
+    console.error('Error in password reset:', err.message);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

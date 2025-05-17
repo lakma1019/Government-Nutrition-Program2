@@ -107,6 +107,21 @@ router.get('/:nic_number', auth, dataEntryOfficer, async (req, res) => {
   }
 });
 
+// Helper function to check if there's an active contractor other than the one being edited
+const checkActiveContractor = async (connection, contractorId = null) => {
+  let query = 'SELECT id, contractor_nic_number, full_name FROM contractors WHERE is_active = "yes"';
+  let params = [];
+
+  // If contractorId is provided, exclude that contractor from the check
+  if (contractorId) {
+    query += ' AND id != ?';
+    params.push(contractorId);
+  }
+
+  const [activeContractors] = await connection.query(query, params);
+  return activeContractors.length > 0 ? activeContractors[0] : null;
+};
+
 // @route   POST /api/contractors
 // @desc    Create a new contractor with optional supporter
 // @access  Private (DEO only)
@@ -149,6 +164,29 @@ router.post('/', auth, dataEntryOfficer, async (req, res) => {
         success: false,
         message: 'Contractor with this NIC number already exists'
       });
+    }
+
+    // Check if trying to add an active contractor when one already exists
+    if (is_active === 'yes') {
+      const connection = await pool.getConnection();
+      try {
+        const activeContractor = await checkActiveContractor(connection);
+        if (activeContractor) {
+          connection.release();
+          return res.status(400).json({
+            success: false,
+            message: 'Only one active contractor is allowed. Please deactivate the current active contractor first.',
+            activeContractor: {
+              id: activeContractor.id,
+              nic_number: activeContractor.contractor_nic_number,
+              full_name: activeContractor.full_name
+            }
+          });
+        }
+      } catch (error) {
+        connection.release();
+        throw error;
+      }
     }
 
     // Start a transaction
@@ -304,12 +342,31 @@ router.put('/:nic_number', auth, dataEntryOfficer, async (req, res) => {
     }
 
     const contractorId = existingContractors[0].id;
+    const currentIsActive = existingContractors[0].is_active;
 
     // Start a transaction
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
+      // Check if trying to activate a contractor when another one is already active
+      if (is_active === 'yes' && currentIsActive !== 'yes') {
+        const activeContractor = await checkActiveContractor(connection, contractorId);
+        if (activeContractor) {
+          await connection.rollback();
+          connection.release();
+          return res.status(400).json({
+            success: false,
+            message: 'Only one active contractor is allowed. Please deactivate the current active contractor first.',
+            activeContractor: {
+              id: activeContractor.id,
+              nic_number: activeContractor.contractor_nic_number,
+              full_name: activeContractor.full_name
+            }
+          });
+        }
+      }
+
       // Update contractor
       await connection.query(
         `UPDATE contractors

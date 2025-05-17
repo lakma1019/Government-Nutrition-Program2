@@ -46,6 +46,13 @@ export default function ContractorsManagement() {
   const [currentContractor, setCurrentContractor] = useState<Contractor | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [contractorToDelete, setContractorToDelete] = useState<string | null>(null);
+  const [showActiveContractorConfirm, setShowActiveContractorConfirm] = useState(false);
+  const [activeContractorInfo, setActiveContractorInfo] = useState<{
+    id: number;
+    nic_number: string;
+    full_name: string;
+  } | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { user, token } = useAuth();
@@ -247,8 +254,31 @@ export default function ContractorsManagement() {
           body: JSON.stringify(formData),
         });
         responseText = await response.text();
-        try { data = JSON.parse(responseText); } catch (e) { throw new Error(`Server returned invalid JSON: ${responseText}`); }
-        if (!response.ok) throw new Error(`Server returned ${response.status}: ${data.message || responseText}`);
+
+        // Log the response for debugging
+        console.log('Response status:', response.status);
+        console.log('Response text:', responseText);
+
+        try {
+          data = JSON.parse(responseText);
+          console.log('Parsed data:', data);
+        } catch (e) {
+          console.error('JSON parse error:', e);
+          throw new Error(`Server returned invalid JSON: ${responseText}`);
+        }
+
+        if (!response.ok) {
+          // Check if the error is due to active contractor constraint
+          if (response.status === 400 && data && data.activeContractor) {
+            console.log('Active contractor found:', data.activeContractor);
+            setActiveContractorInfo(data.activeContractor);
+            setPendingFormData(formData);
+            setShowActiveContractorConfirm(true);
+            return;
+          }
+          throw new Error(`Server returned ${response.status}: ${data && data.message ? data.message : responseText}`);
+        }
+
         if (data.success) {
           showNotification('success', data.message || 'Contractor updated successfully!');
           fetchContractors();
@@ -265,8 +295,31 @@ export default function ContractorsManagement() {
           body: JSON.stringify(formData),
         });
         responseText = await response.text();
-        try { data = JSON.parse(responseText); } catch (e) { throw new Error(`Server returned invalid JSON: ${responseText}`); }
-        if (!response.ok) throw new Error(`Server returned ${response.status}: ${data.message || responseText}`);
+
+        // Log the response for debugging
+        console.log('Response status:', response.status);
+        console.log('Response text:', responseText);
+
+        try {
+          data = JSON.parse(responseText);
+          console.log('Parsed data:', data);
+        } catch (e) {
+          console.error('JSON parse error:', e);
+          throw new Error(`Server returned invalid JSON: ${responseText}`);
+        }
+
+        if (!response.ok) {
+          // Check if the error is due to active contractor constraint
+          if (response.status === 400 && data && data.activeContractor) {
+            console.log('Active contractor found:', data.activeContractor);
+            setActiveContractorInfo(data.activeContractor);
+            setPendingFormData(formData);
+            setShowActiveContractorConfirm(true);
+            return;
+          }
+          throw new Error(`Server returned ${response.status}: ${data && data.message ? data.message : responseText}`);
+        }
+
         if (data.success) {
           showNotification('success', data.message || 'Contractor added successfully!');
           fetchContractors();
@@ -344,6 +397,90 @@ export default function ContractorsManagement() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       showNotification('error', `Failed to delete contractor: ${errorMessage}`);
+    }
+  };
+
+  // Function to handle confirmation of deactivating current active contractor
+  const confirmDeactivateActiveContractor = async () => {
+    if (!activeContractorInfo || !pendingFormData || !token) {
+      setShowActiveContractorConfirm(false);
+      showNotification('error', 'Missing information for contractor activation.');
+      return;
+    }
+
+    try {
+      // First, fetch the full details of the currently active contractor
+      const fetchResponse = await fetch(`http://localhost:3001/api/contractors/${activeContractorInfo.nic_number}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!fetchResponse.ok) {
+        throw new Error(`Failed to fetch active contractor details: ${fetchResponse.status}`);
+      }
+
+      const fetchData = await fetchResponse.json();
+      if (!fetchData.success || !fetchData.data) {
+        throw new Error('Failed to fetch active contractor details');
+      }
+
+      const activeContractorDetails = fetchData.data;
+
+      // Now deactivate the currently active contractor with all its details
+      const deactivateResponse = await fetch(`http://localhost:3001/api/contractors/${activeContractorInfo.nic_number}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...activeContractorDetails,
+          contractor_nic_number: activeContractorInfo.nic_number,
+          full_name: activeContractorInfo.full_name,
+          is_active: 'no' // Set to inactive
+        }),
+      });
+
+      if (!deactivateResponse.ok) {
+        const deactivateText = await deactivateResponse.text();
+        let deactivateData;
+        try { deactivateData = JSON.parse(deactivateText); } catch (e) { throw new Error(`Server returned invalid JSON: ${deactivateText}`); }
+        throw new Error(`Failed to deactivate current contractor: ${deactivateData.message || deactivateText}`);
+      }
+
+      // Now submit the original form data again
+      const submitResponse = await fetch(editMode && currentContractor
+        ? `http://localhost:3001/api/contractors/${currentContractor.nic_number}`
+        : 'http://localhost:3001/api/contractors', {
+        method: editMode && currentContractor ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(pendingFormData),
+      });
+
+      const submitText = await submitResponse.text();
+      let submitData;
+      try { submitData = JSON.parse(submitText); } catch (e) { throw new Error(`Server returned invalid JSON: ${submitText}`); }
+
+      if (!submitResponse.ok) {
+        throw new Error(`Failed to ${editMode ? 'update' : 'add'} contractor: ${submitData.message || submitText}`);
+      }
+
+      showNotification('success', `Contractor ${editMode ? 'updated' : 'added'} successfully and set as active. Previous active contractor was deactivated.`);
+      fetchContractors();
+      resetForm();
+      setShowForm(false);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      showNotification('error', errorMessage);
+    } finally {
+      setShowActiveContractorConfirm(false);
+      setPendingFormData(null);
+      setActiveContractorInfo(null);
     }
   };
 
@@ -668,9 +805,39 @@ export default function ContractorsManagement() {
                 </div>
               </div>
             )}
+
+
           </div>
         )}
       </div>
+
+      {/* Active contractor confirmation modal - placed outside other conditionals so it can always be shown */}
+      {showActiveContractorConfirm && activeContractorInfo && (
+        <div className={modalOverlayClasses}>
+          <div className={modalContentClasses}>
+            <div className={modalHeaderClasses}>
+              <h2 className={modalHeaderH2Classes}>Active Contractor Exists</h2>
+              <button className={closeModalClasses} onClick={() => setShowActiveContractorConfirm(false)}>×</button>
+            </div>
+            <div className={modalBodyClasses}>
+              <p className="mb-4">
+                There is already an active contractor: <strong>{activeContractorInfo.full_name}</strong> (NIC: {activeContractorInfo.nic_number}).
+              </p>
+              <p className="mb-4">
+                Only one contractor can be active at a time. Would you like to deactivate the current active contractor and activate this one instead?
+              </p>
+              <div className={modalFormActionsClasses}>
+                <button type="button" className={deleteConfirmButtonClasses} onClick={confirmDeactivateActiveContractor}>
+                  Deactivate Current & Activate New
+                </button>
+                <button type="button" className={modalCancelButtonClasses} onClick={() => setShowActiveContractorConfirm(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -556,7 +556,7 @@ export default function GenerateProgressReportPage() {
   useEffect(() => {
     if (typeof window !== 'undefined' && !loading) {
       setTimeout(() => {
-        const addRowBtn = document.getElementById('add-row-btn');
+        // Removed addRowBtn since we no longer need to add empty rows
         const tbody = document.getElementById('report-tbody');
 
         // Classes for table cell content (span) and table cells (td) and rows (tr)
@@ -568,36 +568,8 @@ export default function GenerateProgressReportPage() {
         const trStyleStr = `page-break-inside: avoid; page-break-after: auto;`;
         const tdStyleStr = `border: 1px solid black; padding: 8px; text-align: center; vertical-align: middle; height: 1.5em;`;
 
-        const createRowHtml = () => {
-          return `<tr class="${trClasses}" style="${trStyleStr}">
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="date"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="female"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="male"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="total"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="unitPrice"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="amount"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="methodReceived"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="mealRecipe"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="eggs"></span></td>
-            <td class="${tdClasses}" style="${tdStyleStr}"><span class="${cellContentClasses}" data-field="fruits"></span></td>
-          </tr>`;
-        };
-
-        if (addRowBtn && tbody) {
-          addRowBtn.addEventListener('click', () => {
-            tbody.insertAdjacentHTML('beforeend', createRowHtml());
-          });
-
-          tbody.addEventListener('click', (event) => {
-            const target = event.target as HTMLElement;
-            if (target.classList.contains('remove-row-btn')) {
-              const row = target.closest('tr');
-              if (row) {
-                row.remove();
-              }
-            }
-          });
-        }
+        // Removed code for adding empty rows and row removal functionality
+        // since we only want to display actual data rows
 
         const educationZoneEl = document.getElementById('education-zone-value');
         const schoolNameEl = document.getElementById('school-name-value');
@@ -638,10 +610,7 @@ export default function GenerateProgressReportPage() {
             tbody.appendChild(newRow);
           });
 
-          // Add empty rows
-          for (let i = 0; i < 5; i++) {
-            tbody.insertAdjacentHTML('beforeend', createRowHtml());
-          }
+          // Empty rows have been removed to make the report cleaner and more concise
         }
       }, 100);
     }
@@ -732,7 +701,7 @@ export default function GenerateProgressReportPage() {
                   <p className="flex items-center whitespace-nowrap ml-8 shrink-0 min-w-[300px] my-2">
                     {/* The approvedStudentsValue was not in initial state. Assuming fixed values for example or fetch it too. */}
                     <span className="shrink-0 mr-2">Approved Number of Students = {reportData.approvedStudentsValue || '112'} Students</span>
-                    <span className="shrink-0 mr-2">90% = {/* Calculate or fetch this value e.g. Math.round(parseInt(reportData.approvedStudentsValue || '0') * 0.9) */}</span>
+                    <span className="shrink-0 mr-2">90% = 125</span>
                   </p>
                 </div>
               </section>

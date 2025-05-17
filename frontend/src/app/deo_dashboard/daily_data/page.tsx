@@ -543,7 +543,7 @@ export default function DailyDataManagement() {
 
               <div className={formRowClasses}>
                 <div className={formGroupClasses}>
-                  <label htmlFor="number_of_eggs" className={formLabelClasses}>Number of Eggs</label>
+                  <label htmlFor="number_of_eggs" className={formLabelClasses}>No. of Eggs</label>
                   <input type="number" id="number_of_eggs" name="number_of_eggs" value={formData.number_of_eggs} onChange={handleInputChange} min="0" className={formInputBaseClasses} />
                 </div>
                 <div className={formGroupClasses}>

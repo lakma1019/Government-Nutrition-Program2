@@ -53,6 +53,59 @@ router.get('/', auth, dataEntryOfficer, async (req, res) => {
   }
 });
 
+// @route   GET /api/contractors/active
+// @desc    Get the active contractor
+// @access  Private (DEO only)
+router.get('/active', auth, dataEntryOfficer, async (req, res) => {
+  try {
+    // Get the active contractor with supporter using a LEFT JOIN
+    const [contractors] = await pool.query(`
+      SELECT
+        c.id,
+        c.contractor_nic_number AS nic_number,
+        c.full_name,
+        c.contact_number,
+        c.address,
+        c.agreement_number,
+        c.agreement_start_date,
+        c.agreement_end_date,
+        c.is_active,
+        c.created_at,
+        c.updated_at,
+        s.supporter_nic_number,
+        s.supporter_name,
+        s.supporter_contact_number,
+        s.supporter_address,
+        s.is_active AS supporter_is_active,
+        s.created_at AS supporter_created_at,
+        s.updated_at AS supporter_updated_at,
+        CASE WHEN s.id IS NOT NULL THEN 'yes' ELSE 'no' END AS has_supporter
+      FROM contractors c
+      LEFT JOIN supporters s ON c.id = s.contractor_id
+      WHERE c.is_active = 'yes'
+      LIMIT 1
+    `);
+
+    if (contractors.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active contractor found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: contractors[0]
+    });
+  } catch (err) {
+    console.error('Error getting active contractor:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 // @route   GET /api/contractors/:nic_number
 // @desc    Get contractor by NIC number
 // @access  Private (DEO only)

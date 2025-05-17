@@ -6,12 +6,12 @@ const { dailyDataSchema } = require('../schemas/dailyData');
 
 // @route   GET /api/daily-data
 // @desc    Get all daily data entries
-// @access  Private (DEO only)
-router.get('/', auth, dataEntryOfficer, async (req, res) => {
+// @access  Public (for progress report)
+router.get('/', async (req, res) => {
   try {
-    // Get all daily data entries
+    // Get all daily data entries sorted by date (oldest to newest)
     const [dailyData] = await pool.query(
-      'SELECT * FROM daily_data ORDER BY date DESC'
+      'SELECT * FROM daily_data ORDER BY date ASC'
     );
 
     res.json({

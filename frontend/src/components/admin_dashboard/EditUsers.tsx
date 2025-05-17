@@ -36,6 +36,14 @@ export default function EditUsersComponent() {
     isActive: 'yes'
   });
 
+  // State for active user confirmation
+  const [showActiveUserConfirm, setShowActiveUserConfirm] = useState(false);
+  const [activeUserInfo, setActiveUserInfo] = useState<{
+    id: number;
+    username: string;
+  } | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
+
   // Form validation state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -259,43 +267,54 @@ export default function EditUsersComponent() {
 
       console.log('Response data:', data);
 
-      if (response.ok) {
-        // Show success message
-        const successMessage = data.message || 'User updated successfully';
-        setFormSuccess(successMessage);
-        console.log(successMessage);
-
-        // Refresh the users list
-        fetchUsers();
-
-        // Reset form
-        if (selectedUser) {
-          // Update the selected user with the new data from the response
-          setSelectedUser({
-            ...selectedUser,
-            username: data.user.username,
-            role: data.user.role,
-            is_active: data.user.is_active
-          });
-
-          // Reset form fields
-          setFormData({
-            username: data.user.username,
-            password: '', // Clear password field
-            confirmPassword: '', // Clear confirm password field
-            role: data.user.role as 'admin' | 'deo' | 'vo',
-            isActive: data.user.is_active as 'yes' | 'no'
-          });
+      if (!response.ok) {
+        // Check if the error is due to active user constraint
+        if (response.status === 400 && data.activeUser) {
+          console.log('Active user found:', data.activeUser);
+          setActiveUserInfo(data.activeUser);
+          setPendingFormData(userData);
+          setShowActiveUserConfirm(true);
+          return;
         }
 
-        // Make sure the success message is visible
-        const successElement = document.getElementById('success-message');
-        if (successElement) {
-          successElement.scrollIntoView({ behavior: 'smooth' });
-        }
-      } else {
         setFormError(data.message || 'Failed to update user');
         console.error('Update failed:', data);
+        return;
+      }
+
+      // If we get here, the response was OK
+      // Show success message
+      const successMessage = data.message || 'User updated successfully';
+      setFormSuccess(successMessage);
+      console.log(successMessage);
+
+      // Refresh the users list
+      fetchUsers();
+
+      // Reset form
+      if (selectedUser) {
+        // Update the selected user with the new data from the response
+        setSelectedUser({
+          ...selectedUser,
+          username: data.user.username,
+          role: data.user.role,
+          is_active: data.user.is_active
+        });
+
+        // Reset form fields
+        setFormData({
+          username: data.user.username,
+          password: '', // Clear password field
+          confirmPassword: '', // Clear confirm password field
+          role: data.user.role as 'admin' | 'deo' | 'vo',
+          isActive: data.user.is_active as 'yes' | 'no'
+        });
+      }
+
+      // Make sure the success message is visible
+      const successElement = document.getElementById('success-message');
+      if (successElement) {
+        successElement.scrollIntoView({ behavior: 'smooth' });
       }
     } catch (err) {
       console.error('Error updating user:', err);
@@ -308,6 +327,85 @@ export default function EditUsersComponent() {
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+
+  // Function to handle confirmation of deactivating current active user
+  const confirmDeactivateActiveUser = async () => {
+    if (!activeUserInfo || !pendingFormData || !selectedUser) {
+      setShowActiveUserConfirm(false);
+      setFormError('Missing information for user activation.');
+      return;
+    }
+
+    try {
+      // First, deactivate the currently active user
+      const deactivateResponse = await fetchWithCSRF(`http://localhost:3001/api/users/${activeUserInfo.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          username: activeUserInfo.username,
+          is_active: 'no',
+          role: pendingFormData.role // Keep the same role
+        }),
+      });
+
+      if (!deactivateResponse.ok) {
+        const deactivateData = await deactivateResponse.json();
+        throw new Error(`Failed to deactivate current user: ${deactivateData.message || 'Unknown error'}`);
+      }
+
+      // Now submit the original update request again
+      const submitResponse = await fetchWithCSRF(`http://localhost:3001/api/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(pendingFormData),
+      });
+
+      const submitData = await submitResponse.json();
+
+      if (!submitResponse.ok) {
+        throw new Error(`Failed to update user: ${submitData.message || 'Unknown error'}`);
+      }
+
+      // Show success message
+      setFormSuccess(`User updated successfully and set as active. Previous active ${pendingFormData.role.toUpperCase()} was deactivated.`);
+
+      // Refresh the users list
+      fetchUsers();
+
+      // Update the selected user with the new data
+      if (selectedUser) {
+        setSelectedUser({
+          ...selectedUser,
+          username: submitData.user.username,
+          role: submitData.user.role,
+          is_active: submitData.user.is_active
+        });
+
+        // Reset form fields
+        setFormData({
+          username: submitData.user.username,
+          password: '', // Clear password field
+          confirmPassword: '', // Clear confirm password field
+          role: submitData.user.role as 'admin' | 'deo' | 'vo',
+          isActive: submitData.user.is_active as 'yes' | 'no'
+        });
+      }
+
+    } catch (err) {
+      console.error('Error in deactivate/activate process:', err);
+      setFormError(err instanceof Error ? err.message : 'An unexpected error occurred');
+    } finally {
+      setShowActiveUserConfirm(false);
+      setPendingFormData(null);
+      setActiveUserInfo(null);
+    }
   };
 
   // CSS Classes
@@ -420,7 +518,7 @@ export default function EditUsersComponent() {
         <div className={formContainerClasses}>
           {selectedUser ? (
             <>
-              <h2 className="text-xl font-semibold mb-4">Edit User: {selectedUser.username}</h2>
+              <h2 className="text-xl font-semibold mb-4">Edit  {selectedUser.username} user login credentials:</h2>
 
               {/* User current role and status badges */}
               <div className="flex flex-wrap gap-3 mb-4">
@@ -618,6 +716,45 @@ export default function EditUsersComponent() {
       <Link href="/admin_dashboard" className={backLinkClasses}>
         ← Back to Dashboard
       </Link>
+
+      {/* Active user confirmation modal */}
+      {showActiveUserConfirm && activeUserInfo && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg w-11/12 max-w-sm shadow-xl overflow-hidden">
+            <div className="bg-gray-100 py-4 px-5 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="m-0 text-lg font-semibold text-gray-800">Active User Exists</h2>
+              <button
+                onClick={() => setShowActiveUserConfirm(false)}
+                className="bg-none border-none text-2xl cursor-pointer text-gray-600 hover:text-red-600"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 text-gray-700 text-sm">
+              <p className="mb-4">
+                There is already an active user with the role {pendingFormData?.role.toUpperCase()}: <strong>{activeUserInfo.username}</strong>
+              </p>
+              <p className="mb-4">
+                Only one active user per role is allowed. Would you like to deactivate the current active user and activate this one instead?
+              </p>
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => setShowActiveUserConfirm(false)}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeactivateActiveUser}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
+                >
+                  Deactivate Current & Activate New
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,14 @@ export default function AddUsersComponent() {
   const [error, setError] = useState<string | null>(null);
   const { fetchWithCSRF, loading: csrfLoading } = useFetchWithCSRF();
 
+  // State for active user confirmation
+  const [showActiveUserConfirm, setShowActiveUserConfirm] = useState(false);
+  const [activeUserInfo, setActiveUserInfo] = useState<{
+    id: number;
+    username: string;
+  } | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
+
   // Form state
   const [formData, setFormData] = useState<AddUserFormData>({
     username: '',
@@ -126,7 +134,33 @@ export default function AddUsersComponent() {
 
       const data = await response.json();
 
-      if (response.ok) {
+      // Log the response for debugging
+      console.log('Response status:', response.status);
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        // Check if the error is due to active user constraint
+        if (response.status === 400 && data.activeUser) {
+          console.log('Active user found:', data.activeUser);
+          setActiveUserInfo(data.activeUser);
+          setPendingFormData(userData);
+          setShowActiveUserConfirm(true);
+          return;
+        }
+
+        // Handle other errors
+        if (data.errors && Array.isArray(data.errors)) {
+          const errorMessage = data.errors.map((err: any) =>
+            `${err.path.join('.')}: ${err.message}`
+          ).join(', ');
+          setError(errorMessage || data.message || 'Failed to add user');
+        } else {
+          setError(data.message || 'Failed to add user');
+        }
+
+        console.error('Error response:', data);
+        return;
+      }
         // Check if this is a DEO or VO user that requires additional details
         if (data.requiresAdditionalDetails && data.user && data.user.id) {
           // Log user data for debugging
@@ -247,6 +281,105 @@ export default function AddUsersComponent() {
       } else if (createdUserRole === 'verificationOfficer' || createdUserRole === 'vo') {
         window.location.href = `/admin_dashboard/add_users/vo_details?userId=${createdUserId}`;
       }
+    }
+  };
+
+  // Function to handle confirmation of deactivating current active user
+  const confirmDeactivateActiveUser = async () => {
+    if (!activeUserInfo || !pendingFormData) {
+      setShowActiveUserConfirm(false);
+      setError('Missing information for user activation.');
+      return;
+    }
+
+    try {
+      // Get auth token
+      const authToken = localStorage.getItem('token');
+      if (!authToken) {
+        setError('Authentication required. Please log in again.');
+        setShowActiveUserConfirm(false);
+        return;
+      }
+
+      // First, deactivate the currently active user
+      const deactivateResponse = await fetchWithCSRF(`http://localhost:3001/api/users/${activeUserInfo.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({
+          username: activeUserInfo.username,
+          is_active: 'no',
+          role: pendingFormData.role // Keep the same role
+        }),
+      });
+
+      if (!deactivateResponse.ok) {
+        const deactivateData = await deactivateResponse.json();
+        throw new Error(`Failed to deactivate current user: ${deactivateData.message || 'Unknown error'}`);
+      }
+
+      // Now submit the original form data again
+      const submitResponse = await fetchWithCSRF('http://localhost:3001/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pendingFormData),
+      });
+
+      const submitData = await submitResponse.json();
+
+      if (!submitResponse.ok) {
+        throw new Error(`Failed to add user: ${submitData.message || 'Unknown error'}`);
+      }
+
+      // Handle successful registration
+      setSuccess(true);
+
+      // Check if this is a DEO or VO user that requires additional details
+      if (submitData.requiresAdditionalDetails && submitData.user && submitData.user.id) {
+        // Store the authentication token in localStorage
+        if (submitData.token) {
+          localStorage.setItem('token', submitData.token);
+        }
+
+        // Store user ID and role for redirection
+        setCreatedUserId(submitData.user.id);
+        setCreatedUserRole(submitData.user.role);
+
+        // Show manual redirect button after 3 seconds
+        setTimeout(() => {
+          setShowManualRedirect(true);
+        }, 3000);
+
+        // Redirect to the appropriate details page
+        setTimeout(() => {
+          if (submitData.user.role === 'dataEntryOfficer' || submitData.user.role === 'deo') {
+            router.push(`/admin_dashboard/add_users/deo_details?userId=${submitData.user.id}`);
+          } else if (submitData.user.role === 'verificationOfficer' || submitData.user.role === 'vo') {
+            router.push(`/admin_dashboard/add_users/vo_details?userId=${submitData.user.id}`);
+          }
+        }, 1000);
+      } else {
+        // For admin users, just reset form
+        setFormData({
+          username: '',
+          password: '',
+          confirmPassword: '',
+          role: 'admin',
+          isActive: 'yes'
+        });
+      }
+
+    } catch (err) {
+      console.error('Error in deactivate/activate process:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+    } finally {
+      setShowActiveUserConfirm(false);
+      setPendingFormData(null);
+      setActiveUserInfo(null);
     }
   };
 
@@ -457,6 +590,45 @@ export default function AddUsersComponent() {
       <Link href="/admin_dashboard" className={backLinkClasses}>
         ← Back to Dashboard
       </Link>
+
+      {/* Active user confirmation modal */}
+      {showActiveUserConfirm && activeUserInfo && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg w-11/12 max-w-sm shadow-xl overflow-hidden">
+            <div className="bg-gray-100 py-4 px-5 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="m-0 text-lg font-semibold text-gray-800">Active User Exists</h2>
+              <button
+                onClick={() => setShowActiveUserConfirm(false)}
+                className="bg-none border-none text-2xl cursor-pointer text-gray-600 hover:text-red-600"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 text-gray-700 text-sm">
+              <p className="mb-4">
+                There is already an active user with the role {pendingFormData?.role.toUpperCase()}: <strong>{activeUserInfo.username}</strong>
+              </p>
+              <p className="mb-4">
+                Only one active user per role is allowed. Would you like to deactivate the current active user and activate this new one instead?
+              </p>
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => setShowActiveUserConfirm(false)}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeactivateActiveUser}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
+                >
+                  Deactivate Current & Activate New
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

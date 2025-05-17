@@ -4,6 +4,21 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../config/db');
 const { auth } = require('../middleware/auth');
 
+// Helper function to check if there's an active user with a specific role
+const checkActiveUserByRole = async (connection, role, userId = null) => {
+  let query = 'SELECT id, username FROM users WHERE role = ? AND is_active = "yes"';
+  let params = [role];
+
+  // If userId is provided, exclude that user from the check
+  if (userId) {
+    query += ' AND id != ?';
+    params.push(userId);
+  }
+
+  const [activeUsers] = await connection.query(query, params);
+  return activeUsers.length > 0 ? activeUsers[0] : null;
+};
+
 // @route   GET /api/users
 // @desc    Get all users
 // @access  Private (Authentication required)
@@ -64,6 +79,25 @@ router.put('/:id', auth, async (req, res) => {
     console.log('User update request received for ID:', req.params.id);
     console.log('Request body:', JSON.stringify(req.body));
 
+    const userId = req.params.id;
+
+    // Find user by id to get current status and role
+    const [users] = await pool.query(
+      'SELECT * FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const currentUser = users[0];
+    const currentIsActive = currentUser.is_active;
+    const currentRole = currentUser.role;
+
     const {
       username,
       password,
@@ -74,6 +108,29 @@ router.put('/:id', auth, async (req, res) => {
       address,
       profession
     } = req.body;
+
+    // Check if trying to activate a user when another one is already active with the same role
+    if (is_active === 'yes' && (currentIsActive !== 'yes' || role !== currentRole)) {
+      const connection = await pool.getConnection();
+      try {
+        const activeUser = await checkActiveUserByRole(connection, role, userId);
+        if (activeUser) {
+          connection.release();
+          return res.status(400).json({
+            success: false,
+            message: `Only one active ${role.toUpperCase()} is allowed. Please deactivate the current active ${role.toUpperCase()} first.`,
+            activeUser: {
+              id: activeUser.id,
+              username: activeUser.username
+            }
+          });
+        }
+        connection.release();
+      } catch (error) {
+        connection.release();
+        throw error;
+      }
+    }
 
     // Check if user exists
     const [existingUsers] = await pool.query(

@@ -6,6 +6,21 @@ const { pool } = require('../config/db');
 const { auth } = require('../middleware/auth');
 const { loginSchema, passwordResetSchema, userSchema, mapDbRoleToFrontend } = require('../schemas/auth');
 
+// Helper function to check if there's an active user with a specific role
+const checkActiveUserByRole = async (connection, role, userId = null) => {
+  let query = 'SELECT id, username FROM users WHERE role = ? AND is_active = "yes"';
+  let params = [role];
+
+  // If userId is provided, exclude that user from the check
+  if (userId) {
+    query += ' AND id != ?';
+    params.push(userId);
+  }
+
+  const [activeUsers] = await connection.query(query, params);
+  return activeUsers.length > 0 ? activeUsers[0] : null;
+};
+
 // @route   POST /api/auth/register
 // @desc    Register a user
 // @access  Public
@@ -36,6 +51,29 @@ router.post('/register', async (req, res) => {
 
     if (existingUsers.length > 0) {
       return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Check if trying to add an active user when one already exists with the same role
+    if (is_active === 'yes') {
+      const connection = await pool.getConnection();
+      try {
+        const activeUser = await checkActiveUserByRole(connection, role);
+        if (activeUser) {
+          connection.release();
+          return res.status(400).json({
+            success: false,
+            message: `Only one active ${role.toUpperCase()} is allowed. Please deactivate the current active ${role.toUpperCase()} first.`,
+            activeUser: {
+              id: activeUser.id,
+              username: activeUser.username
+            }
+          });
+        }
+        connection.release();
+      } catch (error) {
+        connection.release();
+        throw error;
+      }
     }
 
     // Hash password

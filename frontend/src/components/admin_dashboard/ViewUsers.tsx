@@ -277,7 +277,7 @@ export default function ViewUsersComponent() {
 
   return (
     <div className={containerClasses}>
-      <h1 className={headerClasses}>View Users</h1>
+      <h1 className={headerClasses}>View Users Details</h1>
 
       <div className={gridContainerClasses}>
         {/* User List Section */}

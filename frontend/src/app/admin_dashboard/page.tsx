@@ -151,10 +151,10 @@ export default function AdminDashboardPage() {
             📋
           </div>
           <div className={cardBodyClasses}>
-            <h2 className={cardTitleClasses}>View Users</h2>
+            <h2 className={cardTitleClasses}>View Users Details</h2>
             <p className={cardDescriptionClasses}>Browse and search through all registered user accounts</p>
             <button className="mt-auto px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-              View Users
+              View Users Details
             </button>
           </div>
         </div>

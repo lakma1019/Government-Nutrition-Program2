@@ -69,13 +69,13 @@ export default function EditDEODetailsPage() {
   // Handle success
   const handleSuccess = () => {
     // Redirect to the users list or dashboard
-    router.push('/admin_dashboard/users');
+    router.push('/admin_dashboard/edit_users');
   };
 
   // Handle cancel
   const handleCancel = () => {
     // Go back to the users list
-    router.push('/admin_dashboard/users');
+    router.push('/admin_dashboard/edit_users');
   };
 
   if (loading) {
@@ -88,7 +88,7 @@ export default function EditDEODetailsPage() {
         <div className="p-4 mb-6 rounded-md bg-red-50 text-red-800 border border-red-200">
           {error}
         </div>
-        <Link href="/admin_dashboard/users" className="inline-flex items-center text-blue-600 hover:text-blue-800 mt-4">
+        <Link href="/admin_dashboard/edit_users" className="inline-flex items-center text-blue-600 hover:text-blue-800 mt-4">
           ← Back to Users
         </Link>
       </div>
@@ -103,7 +103,7 @@ export default function EditDEODetailsPage() {
             <div className="p-4 mb-6 rounded-md bg-red-50 text-red-800 border border-red-200">
               Invalid User ID format. Please go back and try again.
             </div>
-            <Link href="/admin_dashboard/users" className="inline-flex items-center text-blue-600 hover:text-blue-800 mt-4">
+            <Link href="/admin_dashboard/edit_users" className="inline-flex items-center text-blue-600 hover:text-blue-800 mt-4">
               ← Back to Users
             </Link>
           </div>
@@ -120,7 +120,7 @@ export default function EditDEODetailsPage() {
           <div className="p-4 mb-6 rounded-md bg-red-50 text-red-800 border border-red-200">
             User ID is missing. Please go back and try again.
           </div>
-          <Link href="/admin_dashboard/users" className="inline-flex items-center text-blue-600 hover:text-blue-800 mt-4">
+          <Link href="/admin_dashboard/edit_users" className="inline-flex items-center text-blue-600 hover:text-blue-800 mt-4">
             ← Back to Users
           </Link>
         </div>

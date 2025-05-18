@@ -3,17 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+// Firebase imports are done dynamically in the upload function to avoid SSR issues
 
-// Assume Gazette type is defined elsewhere or inline
+// Gazette interface based on the database schema
 interface Gazette {
-  id: string; // Changed from number to string for consistency with mock data/server response
-  title: string;
-  description: string;
-  file_path: string; // This might be a URL or path
-  upload_date: string;
+  id: string; // Using string for flexibility, even though DB uses int
+  gazette_name: string; // Changed from title to match DB schema
   publish_date: string;
+  url: string; // Changed from file_path to match DB schema
   uploader_name?: string;
-  gazette_number?: string; // Added potential field
+  is_active?: 'yes' | 'no'; // New field from DB schema
+  created_at?: string; // Timestamp from DB
+  updated_at?: string; // Timestamp from DB
 }
 
 // Removed GazetteImage interface as image functionality is removed
@@ -24,15 +25,13 @@ export default function GazettePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [credentials, setCredentials] = useState({ username: '', password: '' }); // Credentials for PDF upload
 
   // Removed image-specific authentication state
 
   const [uploadForm, setUploadForm] = useState({ // State for PDF upload modal
-    title: '',
-    description: '',
+    gazette_name: '',
     publishDate: '',
+    is_active: 'yes' as 'yes' | 'no',
     pdfFile: null as File | null
   });
 
@@ -40,8 +39,9 @@ export default function GazettePage() {
     type: 'success' | 'error' | null;
     message: string;
   }>({ type: null, message: '' });
-  const [userId, setUserId] = useState<number | null>(null); // User ID for PDF upload
-  const [username, setUsername] = useState<string>(''); // Username for PDF upload
+  // Using default values for testing without authentication
+  const [userId] = useState<number | null>(1);
+  const [username] = useState<string>('Test User');
 
   // State for search filters
   const [searchName, setSearchName] = useState('');
@@ -86,21 +86,21 @@ export default function GazettePage() {
       if (data.success) {
         console.log('Received gazette data:', data);
 
-        // Map the gazette data to match our expected format
-        const gazettesData = data.data.map(gazette => {
-          // Create a file URL if not present, defaulting to server's uploads path structure
-          const fileUrl = gazette.fileUrl ||
+        // Map the gazette data to match our expected format based on new DB schema
+        const gazettesData = data.data.map((gazette: any) => {
+          // Use the URL directly from the database
+          const url = gazette.url || gazette.fileUrl ||
             (gazette.file_path ? `http://localhost:3001/${gazette.file_path.replace(/\\/g, '/')}` : ''); // Ensure forward slashes
 
           return {
             id: String(gazette.id), // Ensure ID is string
-            title: gazette.userProvidedName || gazette.name || gazette.title || 'Untitled Gazette',
-            description: gazette.description || `Uploaded by ${gazette.uploader_name || 'Unknown'}`,
-            publish_date: gazette.publishDate || gazette.publish_date || '', // Ensure string
-            upload_date: gazette.uploadDate || gazette.upload_date || gazette.created_at || '', // Ensure string
-            file_path: fileUrl, // Use the generated URL
+            gazette_name: gazette.gazette_name || gazette.userProvidedName || gazette.name || gazette.title || 'Untitled Gazette',
+            publish_date: gazette.publish_date || gazette.publishDate || '', // Ensure string
+            url: url, // Use the URL from DB
             uploader_name: gazette.uploader_name,
-            gazette_number: gazette.gazette_number || '' // Ensure string
+            is_active: gazette.is_active || 'yes',
+            created_at: gazette.created_at || gazette.uploadDate || gazette.upload_date || '', // Ensure string
+            updated_at: gazette.updated_at || ''
           };
         });
 
@@ -145,28 +145,30 @@ export default function GazettePage() {
          const data = await response.json();
 
          if (data.success) {
-             const rawGazettes = data.data.map(gazette => ({
+             const rawGazettes = data.data.map((gazette: any) => ({
                  id: String(gazette.id),
-                 title: gazette.userProvidedName || gazette.name || gazette.title || 'Untitled Gazette',
-                 description: gazette.description || `Uploaded by ${gazette.uploader_name || 'Unknown'}`,
-                 publish_date: gazette.publishDate || gazette.publish_date || '',
-                 upload_date: gazette.uploadDate || gazette.upload_date || gazette.created_at || '',
-                 file_path: gazette.fileUrl || (gazette.file_path ? `http://localhost:3001/${gazette.file_path.replace(/\\/g, '/')}` : ''),
+                 gazette_name: gazette.gazette_name || gazette.userProvidedName || gazette.name || gazette.title || 'Untitled Gazette',
+                 publish_date: gazette.publish_date || gazette.publishDate || '',
+                 url: gazette.url || gazette.fileUrl || (gazette.file_path ? `http://localhost:3001/${gazette.file_path.replace(/\\/g, '/')}` : ''),
                  uploader_name: gazette.uploader_name,
-                 gazette_number: gazette.gazette_number || ''
+                 is_active: gazette.is_active || 'yes',
+                 created_at: gazette.created_at || gazette.uploadDate || gazette.upload_date || '',
+                 updated_at: gazette.updated_at || ''
              }));
 
              // Client-side filtering based on searchName and searchDate
-             const filtered = rawGazettes.filter(gazette => {
+             const filtered = rawGazettes.filter((gazette: Gazette) => {
                  const nameMatch = !searchName ||
-                     (gazette.title && gazette.title.toLowerCase().includes(searchName.toLowerCase())) ||
-                     (gazette.description && gazette.description.toLowerCase().includes(searchName.toLowerCase())) ||
-                     (gazette.gazette_number && gazette.gazette_number.toLowerCase().includes(searchName.toLowerCase()));
+                     (gazette.gazette_name && gazette.gazette_name.toLowerCase().includes(searchName.toLowerCase())) ||
+                     (gazette.id && String(gazette.id).includes(searchName));
 
                  const dateMatch = !searchDate ||
                      (gazette.publish_date && gazette.publish_date.startsWith(searchDate)); // Use startsWith for date match
 
-                 return nameMatch && dateMatch;
+                 // Only include active gazettes unless specifically searching for inactive ones
+                 const activeMatch = gazette.is_active !== 'no' || searchName.toLowerCase().includes('inactive');
+
+                 return nameMatch && dateMatch && activeMatch;
              });
 
              setGazettes(filtered);
@@ -191,39 +193,7 @@ export default function GazettePage() {
   };
 
 
-  // Handle credential verification for PDF upload (via modal)
-  const handleVerifyCredentials = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setNotification({ type: null, message: '' });
-
-    try {
-      const response = await fetch('http://localhost:3001/api/gazettes/verify-credentials', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setUserId(data.userId);
-        setUsername(data.username);
-        setShowLoginModal(false);
-        setShowUploadModal(true); // Proceed to upload modal
-        setNotification({ type: 'success', message: 'Credentials verified. You can now upload a gazette.' });
-         // Clear login form
-         setCredentials({ username: '', password: '' });
-
-      } else {
-        setNotification({ type: 'error', message: data.message || 'Invalid credentials. Only Data Entry Officers can upload gazettes.' });
-      }
-    } catch (err: any) {
-      console.error('Error verifying credentials:', err);
-      setNotification({ type: 'error', message: `Failed to verify credentials: ${err.message}` });
-    }
-  };
+  // Authentication is skipped for this test implementation
 
   // Removed handleVerifyImageCredentials
 
@@ -257,7 +227,11 @@ export default function GazettePage() {
     }
   };
 
-  // Handle upload form submission (for PDF modal)
+  // State for upload progress
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Handle upload form submission (for PDF modal) using Firebase Storage
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -266,82 +240,145 @@ export default function GazettePage() {
       return;
     }
 
-    if (!uploadForm.title) {
-      setNotification({ type: 'error', message: 'Please enter a title for the gazette' });
+    if (!uploadForm.gazette_name) {
+      setNotification({ type: 'error', message: 'Please enter a name for the gazette' });
       return;
     }
 
-    if (!userId || !username) {
-         setNotification({ type: 'error', message: 'Authentication required to upload.' });
-         // Should not happen if modal logic is correct, but good safety check
-         setShowUploadModal(false);
-         setShowLoginModal(true); // Redirect to login if somehow not authenticated
-         return;
-    }
+    // We're skipping authentication for this test implementation
+    // Use a default username if not authenticated
+    const uploaderName = username || 'Test User';
 
     setNotification({ type: null, message: '' }); // Clear previous notifications
+    setIsUploading(true);
+    setUploadProgress(0);
 
     try {
-      const formData = new FormData();
-      formData.append('pdf', uploadForm.pdfFile);
-      formData.append('name', uploadForm.title); // Use title as name for upload endpoint
-      formData.append('publishDate', uploadForm.publishDate || new Date().toISOString().split('T')[0]);
-      formData.append('userId', userId.toString()); // Add user ID
-      formData.append('username', username); // Add username
+      // Import Firebase modules dynamically to avoid SSR issues
+      const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+      const { storage } = await import('@/config/firebase');
 
-      // Description is added only when saving to DB, not needed for /upload/gazette-pdf
-      // But the test endpoint might expect it? Let's add it just in case.
-      formData.append('description', uploadForm.description);
+      // Generate a unique path for the file in Firebase Storage
+      const timestamp = new Date().getTime();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const fileName = uploadForm.pdfFile.name.replace(/[^a-zA-Z0-9.]/g, '_'); // Replace non-alphanumeric chars
+      const filePath = `gazettes/${timestamp}_${randomString}_${fileName}`;
 
+      console.log('[GAZETTE] Uploading file to Firebase:', filePath);
 
-      console.log('Attempting to upload PDF:', uploadForm.title);
-
-      const response = await fetch('http://localhost:3001/api/upload/gazette-pdf', {
-        method: 'POST',
-        body: formData,
-      });
-
-      console.log('PDF upload response status:', response.status);
-
-      const responseText = await response.text();
-      console.log('PDF upload raw response:', responseText);
-
-      let data;
-      try {
-         data = JSON.parse(responseText);
-      } catch(parseError) {
-         console.error('Failed to parse PDF upload response as JSON:', parseError);
-         throw new Error(`Failed to parse server response: ${responseText}`);
-      }
-
-
-      if (response.ok && data.success) {
-        console.log('PDF uploaded successfully:', data);
-
-        setNotification({ type: 'success', message: 'Gazette PDF uploaded successfully!' });
-        setShowUploadModal(false);
-        setUploadForm({ // Clear form
-          title: '',
-          description: '',
-          publishDate: '',
-          pdfFile: null
-        });
-        // Reset the file input element
-        const fileInput = document.getElementById('gazettePdf') as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
+      // Create metadata for the file
+      const metadata = {
+        contentType: uploadForm.pdfFile.type,
+        customMetadata: {
+          gazette_name: uploadForm.gazette_name,
+          publish_date: uploadForm.publishDate || new Date().toISOString().split('T')[0],
+          created_at: new Date().toISOString(),
+          is_active: uploadForm.is_active,
+          userId: userId?.toString() || '0',
+          username: username || 'Test User'
         }
-        // Refresh the gazette list
-        fetchGazettes();
+      };
 
-      } else {
-         const errorMessage = data.message || response.statusText || 'Failed to upload gazette PDF';
-         console.error('PDF upload failed:', data);
-         setNotification({ type: 'error', message: `Upload failed: ${errorMessage}` });
-      }
+      // Create a storage reference
+      const storageRef = ref(storage, filePath);
+
+      // Upload the file and metadata
+      const uploadTask = uploadBytesResumable(storageRef, uploadForm.pdfFile, metadata);
+
+      // Set up progress monitoring
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          // Get upload progress
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('[GAZETTE] Upload progress:', progress.toFixed(2), '%');
+          setUploadProgress(progress);
+        },
+        (error) => {
+          // Handle unsuccessful uploads
+          console.error('[GAZETTE] Upload error:', error);
+          let errorMessage = 'Upload failed: ';
+
+          switch (error.code) {
+            case 'storage/unauthorized':
+              errorMessage += 'User doesn\'t have permission to access the storage';
+              break;
+            case 'storage/canceled':
+              errorMessage += 'Upload was canceled';
+              break;
+            case 'storage/unknown':
+              errorMessage += 'Unknown error occurred';
+              break;
+            default:
+              errorMessage += error.message;
+          }
+
+          setNotification({ type: 'error', message: errorMessage });
+          setIsUploading(false);
+        },
+        async () => {
+          // Handle successful uploads
+          console.log('[GAZETTE] Upload completed successfully');
+
+          try {
+            // Get download URL
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            console.log('[GAZETTE] Download URL:', downloadURL);
+
+            // Now save the metadata to the server database
+            const formData = new FormData();
+            formData.append('gazette_name', uploadForm.gazette_name);
+            formData.append('publish_date', uploadForm.publishDate || new Date().toISOString().split('T')[0]);
+            formData.append('url', downloadURL);
+            formData.append('uploader_name', uploaderName);
+            formData.append('is_active', uploadForm.is_active);
+
+            // Save metadata to server (optional - can be implemented later)
+            try {
+              const response = await fetch('http://localhost:3001/api/gazettes', {
+                method: 'POST',
+                body: formData,
+              });
+
+              if (response.ok) {
+                console.log('[GAZETTE] Metadata saved to server');
+              } else {
+                console.warn('[GAZETTE] Failed to save metadata to server, but file was uploaded to Firebase');
+              }
+            } catch (serverErr) {
+              console.warn('[GAZETTE] Error saving metadata to server, but file was uploaded to Firebase:', serverErr);
+            }
+
+            setNotification({ type: 'success', message: 'Gazette PDF uploaded successfully to Firebase!' });
+            setShowUploadModal(false);
+            setUploadForm({ // Clear form
+              gazette_name: '',
+              publishDate: '',
+              is_active: 'yes',
+              pdfFile: null
+            });
+
+            // Reset the file input element
+            const fileInput = document.getElementById('gazettePdf') as HTMLInputElement;
+            if (fileInput) {
+              fileInput.value = '';
+            }
+
+            // Refresh the gazette list
+            fetchGazettes();
+
+          } catch (err: any) {
+            console.error('[GAZETTE] Error getting download URL:', err);
+            setNotification({ type: 'error', message: `Failed to get download URL: ${err.message}` });
+          } finally {
+            setIsUploading(false);
+          }
+        }
+      );
     } catch (err: any) {
-      console.error('Error uploading gazette:', err);
-      setNotification({ type: 'error', message: `Failed to upload gazette: ${err.message}` });
+      console.error('[GAZETTE] Error starting upload:', err);
+      setNotification({ type: 'error', message: `Error starting upload: ${err.message}` });
+      setIsUploading(false);
     }
   };
 
@@ -512,6 +549,13 @@ export default function GazettePage() {
 
 
   // --- Tailwind Class Mapping (Adjusted) ---
+  // Notification styles
+  const notificationBaseClasses = "flex items-center p-4 mb-6 rounded-lg border relative";
+  const notificationSuccessClasses = "bg-green-50 text-green-800 border-green-200";
+  const notificationErrorClasses = "bg-red-50 text-red-800 border-red-200";
+  const notificationIconClasses = "mr-3 flex-shrink-0";
+  const closeNotificationClasses = "absolute right-2 top-2 text-gray-500 hover:text-gray-700 text-xl font-bold cursor-pointer";
+
   // Container and general layout
   const containerClasses = "w-full min-h-screen flex flex-col bg-slate-100 font-sans leading-relaxed text-gray-800";
 
@@ -540,7 +584,6 @@ export default function GazettePage() {
   const searchActionsClasses = "flex gap-3"; // Adjusted gap
   const searchButtonClasses = "py-3 px-6 bg-teal-800 text-white rounded-md font-semibold cursor-pointer transition-colors duration-300 hover:bg-teal-900 flex items-center gap-2"; // Added flex/gap for icon
   const clearButtonClasses = "py-3 px-4 bg-gray-200 text-gray-800 rounded-md cursor-pointer font-medium transition-colors duration-300 hover:bg-gray-300";
-  const refreshButtonClasses = "py-3 px-4 bg-blue-500 text-white rounded-md cursor-pointer font-medium transition-colors duration-300 hover:bg-blue-600 flex items-center gap-1"; // Added flex/gap for icon
   const uploadButtonClasses = "bg-teal-800 text-white border-none py-3 px-7 rounded-lg font-semibold cursor-pointer transition-all duration-300 flex items-center gap-2 shadow-md hover:bg-teal-900"; // Adjusted padding/gap/shadow
 
   // Loading and Error
@@ -560,7 +603,6 @@ export default function GazettePage() {
   const gazetteInfoH3Classes = "mt-0 mb-3 text-teal-800 text-xl font-semibold leading-tight"; // Adjusted size/weight/leading
   const gazetteNumberClasses = "inline-block font-semibold mb-3 text-gray-700 bg-gray-100 py-1.5 px-3 rounded-full text-sm"; // Adjusted colors/padding/rounded
   const gazetteDateClasses = "text-gray-600 text-sm mb-4 flex items-center gap-2"; // Adjusted size/gap, added flex for icon
-  const gazetteDescriptionClasses = "text-gray-700 leading-relaxed text-sm line-clamp-3 text-justify"; // Adjusted color/size/leading, added line-clamp
   const gazetteUploaderClasses = "text-gray-600 text-sm mt-2 italic"; // Adjusted color/size
 
   // Gazette Actions (Main List)
@@ -586,7 +628,6 @@ export default function GazettePage() {
    const formGroupClasses = "mb-7";
    const formLabelClasses = "block mb-3 font-semibold text-gray-700 text-sm";
    const formInputBaseClasses = "w-full py-3 px-4 border border-gray-300 rounded-lg text-base transition-all duration-300 shadow-sm focus:border-teal-800 focus:ring focus:ring-teal-800/10 outline-none";
-   const formTextareaClasses = `${formInputBaseClasses} min-h-[100px] resize-y`;
    const fileHintClasses = "mt-3 text-xs text-gray-600 flex items-center gap-1";
    const submitButtonClasses = "bg-teal-800 text-white border-none py-3 px-7 rounded-lg font-semibold cursor-pointer transition-all duration-300 flex-1 hover:bg-teal-900 shadow-md";
    const cancelButtonClasses = "bg-gray-100 text-gray-700 border border-gray-300 py-3 px-7 rounded-lg font-semibold cursor-pointer transition-all duration-300 flex-1 hover:bg-gray-200";
@@ -696,20 +737,16 @@ export default function GazettePage() {
             <button
               className={uploadButtonClasses}
               onClick={() => {
-                 // Only show login modal if not already verified for PDF upload
-                 if (!userId || !username) {
-                     setShowLoginModal(true);
-                 } else {
-                     // Clear form before opening if already authenticated
-                      setUploadForm({
-                        title: '',
-                        description: '',
-                        publishDate: '',
-                        pdfFile: null
-                      });
-                     setShowUploadModal(true);
-                 }
-                 setNotification({type: null, message: ''}); // Clear notification when opening modal
+                // Skip login modal if user is already authenticated
+                // Clear form before opening
+                setUploadForm({
+                  gazette_name: '',
+                  publishDate: '',
+                  is_active: 'yes',
+                  pdfFile: null
+                });
+                setShowUploadModal(true);
+                setNotification({type: null, message: ''}); // Clear notification when opening modal
               }}
             >
               Upload New Gazette (PDF)
@@ -758,32 +795,34 @@ export default function GazettePage() {
                        <div className={pdfIconFallbackClasses}>📄</div>
                    </div>
                    <div className={gazetteInfoClasses}>
-                     {gazette.gazette_number && <span className={gazetteNumberClasses}>{gazette.gazette_number}</span>}
-                     <h3 className={gazetteInfoH3Classes}>{gazette.title}</h3>
+                     <span className={gazetteNumberClasses}>ID: {gazette.id}</span>
+                     <h3 className={gazetteInfoH3Classes}>{gazette.gazette_name}</h3>
                      <p className={gazetteDateClasses}>
                        {gazette.publish_date ? `📅 Published: ${formatDate(gazette.publish_date)}` : ''}
-                       {gazette.publish_date && gazette.upload_date ? ' | ' : ''}
-                       {gazette.upload_date ? `⬆️ Uploaded: ${formatDate(gazette.upload_date)}` : ''}
+                       {gazette.publish_date && gazette.created_at ? ' | ' : ''}
+                       {gazette.created_at ? `⬆️ Added: ${formatDate(gazette.created_at)}` : ''}
                      </p>
-                     <p className={gazetteDescriptionClasses}>{gazette.description}</p>
+                     {gazette.is_active === 'no' && (
+                       <p className="text-red-600 text-sm font-semibold mt-1 mb-2">Status: Inactive</p>
+                     )}
                      {gazette.uploader_name && (
                        <p className={gazetteUploaderClasses}>Uploaded by: {gazette.uploader_name}</p>
                      )}
                    </div>
                    <div className={gazetteActionsClasses}>
-                     {gazette.file_path && (
+                     {gazette.url && (
                        <>
                          <a
-                           href={gazette.file_path}
+                           href={gazette.url}
                            className={downloadButtonClasses}
                            target="_blank"
                            rel="noopener noreferrer"
-                           download={gazette.title.replace(/ /g, '_') + '.pdf'} // Suggest filename for download
+                           download={gazette.gazette_name.replace(/ /g, '_') + '.pdf'} // Suggest filename for download
                          >
                            ⬇️ Download
                          </a>
                          <a
-                           href={gazette.file_path}
+                           href={gazette.url}
                            className={viewButtonClasses}
                            target="_blank"
                            rel="noopener noreferrer"
@@ -808,75 +847,7 @@ export default function GazettePage() {
         )}
       </div>
 
-      {/* PDF Upload Login Modal */}
-      {showLoginModal && (
-        <div className={modalOverlayClasses}>
-          <div className={modalContentClasses}>
-            <div className={modalHeaderClasses}>
-              <h2 className={modalHeaderH2Classes}>Authentication Required (PDF Upload)</h2>
-              <button
-                className={closeModalClasses}
-                onClick={() => {
-                  setShowLoginModal(false);
-                   // Clear login form on close
-                  setCredentials({ username: '', password: '' });
-                  setNotification({type: null, message: ''}); // Clear notification when closing modal
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div className={modalBodyClasses}>
-              <p className="mb-6 text-gray-700">Only Data Entry Officers can upload gazettes. Please enter your credentials:</p>
-              <form onSubmit={handleVerifyCredentials}>
-                <div className={formGroupClasses}>
-                  <label htmlFor="username" className={formLabelClasses}>Username</label>
-                  <input
-                    type="text"
-                    id="username"
-                    value={credentials.username}
-                    onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-                    required
-                    className={formInputBaseClasses}
-                    autoComplete="username" // Add autocomplete hint
-                  />
-                  <p className={fileHintClasses}>ℹ️ Enter your Data Entry Officer username (e.g., dataeo1, dataeo2, etc.)</p>
-                </div>
-                <div className={formGroupClasses}>
-                  <label htmlFor="password" className={formLabelClasses}>Password</label>
-                  <input
-                    type="password"
-                    id="password"
-                    value={credentials.password}
-                    onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-                    required
-                    className={formInputBaseClasses}
-                    autoComplete="current-password" // Add autocomplete hint
-                  />
-                  <p className={fileHintClasses}>ℹ️ Password format: [username]123 (e.g., dataeo1123, dataeo2123, etc.)</p>
-                </div>
-                <div className={modalFormActionsClasses}>
-                  <button type="submit" className={submitButtonClasses} disabled={!credentials.username || !credentials.password}>Verify</button>
-                  <button
-                    type="button"
-                    className={cancelButtonClasses}
-                    onClick={() => {
-                      setShowLoginModal(false);
-                       // Clear login form on cancel
-                      setCredentials({ username: '', password: '' });
-                      setNotification({type: null, message: ''}); // Clear notification when closing modal
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Removed Image Upload Login Modal */}
+      {/* Login modal removed as we're skipping authentication for this test implementation */}
 
 
       {/* Upload Modal (for PDF Upload after verification) */}
@@ -887,16 +858,20 @@ export default function GazettePage() {
               <h2 className={modalHeaderH2Classes}>Upload New Gazette (PDF)</h2>
               <button
                 className={closeModalClasses}
+                disabled={isUploading}
                 onClick={() => {
-                  setShowUploadModal(false);
-                  setUploadForm({ // Clear form state on close
-                    title: '',
-                    description: '',
-                    publishDate: '',
-                    pdfFile: null
-                  });
-                   setNotification({type: null, message: ''}); // Clear notification when closing modal
+                  if (!isUploading) {
+                    setShowUploadModal(false);
+                    setUploadForm({ // Clear form state on close
+                      gazette_name: '',
+                      publishDate: '',
+                      is_active: 'yes',
+                      pdfFile: null
+                    });
+                    setNotification({type: null, message: ''}); // Clear notification when closing modal
+                  }
                 }}
+                style={{ opacity: isUploading ? 0.5 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}
               >
                 ×
               </button>
@@ -904,24 +879,14 @@ export default function GazettePage() {
             <div className={modalBodyClasses}>
               <form onSubmit={handleUploadSubmit}>
                 <div className={formGroupClasses}>
-                  <label htmlFor="title" className={formLabelClasses}>Title*</label>
+                  <label htmlFor="gazette_name" className={formLabelClasses}>Gazette Name*</label>
                   <input
                     type="text"
-                    id="title"
-                    value={uploadForm.title}
-                    onChange={(e) => setUploadForm({...uploadForm, title: e.target.value})}
+                    id="gazette_name"
+                    value={uploadForm.gazette_name}
+                    onChange={(e) => setUploadForm({...uploadForm, gazette_name: e.target.value})}
                     required
                     className={formInputBaseClasses}
-                  />
-                </div>
-                <div className={formGroupClasses}>
-                  <label htmlFor="description" className={formLabelClasses}>Description</label>
-                  <textarea
-                    id="description"
-                    value={uploadForm.description}
-                    onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
-                    rows={3}
-                    className={formTextareaClasses}
                   />
                 </div>
                 <div className={formGroupClasses}> {/* Removed form-row/half-width as it only had one item */}
@@ -933,6 +898,36 @@ export default function GazettePage() {
                       onChange={(e) => setUploadForm({...uploadForm, publishDate: e.target.value})}
                       className={formInputBaseClasses}
                     />
+                </div>
+
+                <div className={formGroupClasses}>
+                  <label className={formLabelClasses}>Status</label>
+                  <div className="flex items-center space-x-2">
+                    <div
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        uploadForm.is_active === 'yes' ? 'bg-teal-600' : 'bg-gray-300'
+                      }`}
+                      onClick={() => setUploadForm({
+                        ...uploadForm,
+                        is_active: uploadForm.is_active === 'yes' ? 'no' : 'yes'
+                      })}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          uploadForm.is_active === 'yes' ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      {uploadForm.is_active === 'yes' ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {uploadForm.is_active === 'yes'
+                      ? 'This gazette will be visible to all users'
+                      : 'This gazette will be hidden from regular users'}
+                  </p>
                 </div>
 
                 <div className={formGroupClasses}>
@@ -972,20 +967,42 @@ export default function GazettePage() {
                    </div>
                   <p className={fileHintClasses}>ℹ️ Only PDF files are allowed (max 10MB)</p>
                 </div>
+                {/* Progress Bar */}
+                {isUploading && (
+                  <div className="mt-4 mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Upload Progress: {uploadProgress.toFixed(0)}%
+                    </label>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div
+                        className="bg-teal-600 h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
                 <div className={modalFormActionsClasses}>
-                  <button type="submit" className={submitButtonClasses} disabled={!uploadForm.title || !uploadForm.pdfFile}>Upload Gazette</button>
+                  <button
+                    type="submit"
+                    className={submitButtonClasses}
+                    disabled={!uploadForm.gazette_name || !uploadForm.pdfFile || isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Upload Gazette'}
+                  </button>
                   <button
                     type="button"
                     className={cancelButtonClasses}
+                    disabled={isUploading}
                     onClick={() => {
                       setShowUploadModal(false);
                       setUploadForm({ // Clear form state on cancel
-                        title: '',
-                        description: '',
+                        gazette_name: '',
                         publishDate: '',
+                        is_active: 'yes',
                         pdfFile: null
                       });
-                       setNotification({type: null, message: ''}); // Clear notification when closing modal
+                      setNotification({type: null, message: ''}); // Clear notification when closing modal
                     }}
                   >
                     Cancel

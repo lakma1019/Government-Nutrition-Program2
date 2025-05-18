@@ -69,7 +69,7 @@ const FormNew2: React.FC = () => {
                 <p>சாட்சி</p>
                 <p>Witnesses</p>
             </div>
-            <span className="curly-brace">}</span>
+            <span className="curly-brace">{'}'}</span>
         </div>
 
         {/* SECTION 5: Stamp Box and Receiver Signature (All on the right) */}
@@ -97,7 +97,7 @@ const FormNew2: React.FC = () => {
                     <p>வழங்கும் அலுவலரின் கையொப்பமும் திகதியும்</p>
                     <p>Signature of Paying Officer and Date</p>
                 </div>
-                <span className="curly-brace">}</span>
+                <span className="curly-brace">{'}'}</span>
                 <span className="dots-fill dots-long"></span>
             </div>
         </div>
@@ -177,6 +177,32 @@ const FormNew2: React.FC = () => {
             --line-height-very-tight: 1.1;
 
             --dot-vertical-offset: -4px;
+        }
+
+        @media print {
+          .form-container {
+            margin: 0 !important;
+            padding: 20px !important;
+            box-shadow: none !important;
+            border: 1px solid #000 !important;
+          }
+
+          .form-section {
+            break-inside: avoid;
+          }
+
+          .stamp-box {
+            border-style: solid !important;
+            border-width: 2px !important;
+          }
+
+          .dots-fill {
+            border-bottom: 1px solid #000 !important;
+          }
+
+          input, button, .action-buttons {
+            display: none !important;
+          }
         }
 
         body { /* Applied globally when this component is active */
@@ -303,7 +329,7 @@ const FormNew2: React.FC = () => {
         .indented-line .label-fixed {
             margin-left: calc(var(--spacing-unit) * -2);
         }
-        
+
         .form-footer {
             text-align: center;
             font-size: var(--font-size-small); /* Uses 8pt from this form's :root */

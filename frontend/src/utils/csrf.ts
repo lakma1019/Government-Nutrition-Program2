@@ -2,6 +2,8 @@
  * Utility functions for CSRF token management
  */
 
+import { API_ENDPOINTS } from '@/config';
+
 // Store the CSRF token in memory
 let csrfToken: string = '';
 
@@ -12,7 +14,7 @@ let csrfToken: string = '';
 export async function fetchCSRFToken(): Promise<string> {
   try {
     console.log('Fetching CSRF token...');
-    const response = await fetch('http://localhost:3001/api/csrf-token', {
+    const response = await fetch(API_ENDPOINTS.AUTH.CSRF_TOKEN, {
       method: 'GET',
       credentials: 'include', // Important for cookies
     });

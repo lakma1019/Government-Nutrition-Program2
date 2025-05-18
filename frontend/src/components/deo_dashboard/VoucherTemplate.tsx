@@ -1,40 +1,155 @@
 // components/VoucherTemplate.tsx (or wherever it is)
 'use client';
 
-import React, { useState, useRef } from 'react';
-import FormNew1 from './FormNew1'; // Adjust path if necessary
-import FormNew2 from './FormNew2'; // Adjust path if necessary
+import React, { useState, useRef, useEffect } from 'react';
+import FormNew1 from './FormNew1';
+import FormNew2 from './FormNew2';
 
 interface VoucherTemplateProps {
-  formData: {
-    date: string;
-    schoolName: string;
-    schoolAddress: string;
-    principalName: string;
-    voucherNumber: string;
-    totalAmount: number;
-    description: string;
-  };
-  onPreview?: () => void;
   onSendToVerify?: () => void;
 }
 
-const VoucherTemplate: React.FC<VoucherTemplateProps> = ({ formData, onPreview, onSendToVerify }) => {
+const VoucherTemplate: React.FC<VoucherTemplateProps> = ({ onSendToVerify }) => {
   const [currentPage, setCurrentPage] = useState<1 | 2>(1);
   const [pdfLoading, setPdfLoading] = useState(false);
   const voucherContentRef = useRef<HTMLDivElement>(null);
 
-  // Format date for display (DD/MM/YYYY) - Kept if needed for future data binding
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  // State variables to store auto-populated field values from FormNew1
+  const [debitParticulars, setDebitParticulars] = useState('');
+  const [payableTo, setPayableTo] = useState('');
+  const [authorityDescription, setAuthorityDescription] = useState('');
+  const [preparedBy, setPreparedBy] = useState('');
+  const [checkedBy, setCheckedBy] = useState('');
+
+  // Function to get current month and year (same as in FormNew1)
+  const getCurrentMonthYear = () => {
+    const date = new Date();
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    return `${month} ${year}`;
   };
 
-  // Format amount to display rupees and cents - Kept if needed for future data binding
-  const formatAmount = (amount: number) => {
-    const [rupees, centsValue] = amount.toFixed(2).split('.');
-    return { rupees, cents: centsValue }; // ensure 'cents' is always two digits if needed
+  // Function to fetch active contractor (same as in FormNew1)
+  const fetchActiveContractor = async () => {
+    try {
+      // Get the token from localStorage
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) {
+        console.error('Authentication required');
+        return;
+      }
+
+      const userData = JSON.parse(storedUser);
+      const token = userData.token;
+
+      if (!token) {
+        console.error('Authentication token not found');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/api/contractors/active', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 404) {
+        // No active contractor found, use a default value
+        setPayableTo("No Active Supplier");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch active contractor: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setPayableTo(result.data.full_name);
+      } else {
+        throw new Error(result.message || 'Failed to fetch active contractor');
+      }
+    } catch (err) {
+      console.error('Error fetching active contractor:', err);
+      setPayableTo("Unknown Supplier");
+    }
   };
+
+  // Function to fetch active DEO (same as in FormNew1)
+  const fetchActiveDEO = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/user-details/active/deo');
+
+      if (response.status === 404) {
+        setPreparedBy("No Active DEO");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch active DEO: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setPreparedBy(result.data.full_name);
+      } else {
+        throw new Error(result.message || 'Failed to fetch active DEO');
+      }
+    } catch (err) {
+      console.error('Error fetching active DEO:', err);
+      setPreparedBy("Unknown DEO");
+    }
+  };
+
+  // Function to fetch active VO (same as in FormNew1)
+  const fetchActiveVO = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/user-details/active/vo');
+
+      if (response.status === 404) {
+        setCheckedBy("No Active VO");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch active VO: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setCheckedBy(result.data.full_name);
+      } else {
+        throw new Error(result.message || 'Failed to fetch active VO');
+      }
+    } catch (err) {
+      console.error('Error fetching active VO:', err);
+      setCheckedBy("Unknown VO");
+    }
+  };
+
+  // Set up auto-filling on component mount (same as in FormNew1)
+  useEffect(() => {
+    // Set debit particulars and authority description
+    const monthYear = getCurrentMonthYear();
+    const nutritionText = `Nutritional Cost of ${monthYear}`;
+    setDebitParticulars(nutritionText);
+    setAuthorityDescription(nutritionText);
+
+    // Fetch data for other fields
+    fetchActiveContractor();
+    fetchActiveDEO();
+    fetchActiveVO();
+  }, []);
+
+  // Helper functions for future use can be added here if needed
 
   const goToPreviousPage = () => {
     if (currentPage === 2) {
@@ -49,7 +164,6 @@ const VoucherTemplate: React.FC<VoucherTemplateProps> = ({ formData, onPreview, 
   };
 
   // const currentYear = new Date().getFullYear().toString().slice(2); // Kept if needed
-  // const { rupees, cents } = formatAmount(formData.totalAmount); // Kept if needed
 
   const generatePDF = async () => {
     if (!voucherContentRef.current) {
@@ -67,24 +181,228 @@ const VoucherTemplate: React.FC<VoucherTemplateProps> = ({ formData, onPreview, 
       // Create a container for both pages
       const container = document.createElement('div');
 
-      // Clone the current page
-      const currentPageElement = voucherContentRef.current.querySelector('.voucher-page') as HTMLElement;
-      if (!currentPageElement) {
-        throw new Error('Voucher page element not found');
+      // We need to temporarily render both pages to capture them
+      // We'll handle page state during PDF generation
+
+      // Create a temporary container to render both forms
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '-9999px';
+      document.body.appendChild(tempContainer);
+
+      // Instead of rendering React components, we'll directly create HTML with the auto-populated values
+      // First, let's get the current visible form to use as a template
+      const visibleForm = voucherContentRef.current.querySelector('.voucher-page') as HTMLElement;
+      if (!visibleForm) {
+        throw new Error('No visible form found');
       }
 
-      // Create copies of both pages
+      // Create a container for both forms
+      const form1Container = document.createElement('div');
+      form1Container.className = 'temp-form1';
+      tempContainer.appendChild(form1Container);
+
+      // Clone the visible form as a starting point
+      const form1Clone = document.createElement('div');
+      form1Clone.className = 'voucher-page page1';
+
+      // Get the FormNew1 HTML structure
+      const formNew1HTML = document.querySelector('.page1') || document.createElement('div');
+      form1Clone.innerHTML = formNew1HTML.innerHTML;
+
+      // Create the second form container
+      const form2Container = document.createElement('div');
+      form2Container.className = 'temp-form2';
+      tempContainer.appendChild(form2Container);
+
+      // Clone the FormNew2 structure
+      const form2Clone = document.createElement('div');
+      form2Clone.className = 'voucher-page page2';
+
+      // We need to ensure we capture both pages properly with all their styles
+      // First, save the current page state
+      const originalPage = currentPage;
+
+      // We'll use a more direct approach to capture both pages exactly as they appear
+      // First, let's capture page 1 content if we're on page 2
+      if (currentPage === 2) {
+        console.log('Currently on page 2, switching to page 1 first to capture it');
+        setCurrentPage(1);
+        // Wait for the render to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Now we should be on page 1, capture it
+      console.log('Capturing page 1 content');
+      const page1Content = document.querySelector('.page1');
+      if (page1Content) {
+        // Clone the entire page1 with all its content and styles
+        form1Clone.innerHTML = page1Content.innerHTML;
+      } else {
+        throw new Error('Page 1 content not found');
+      }
+
+      // Now switch to page 2 to capture it
+      console.log('Switching to page 2 to capture its content');
+      setCurrentPage(2);
+
+      // Wait longer for the render to complete to ensure all styles are applied
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Now capture the FormNew2 content with all its styles
+      console.log('Capturing page 2 content');
+      const page2Content = document.querySelector('.page2');
+
+      if (page2Content) {
+        console.log('Page 2 content found, cloning it with all styles');
+        // Clone the entire page including all styles
+        form2Clone.innerHTML = page2Content.innerHTML;
+      } else {
+        console.error('Page 2 content not found');
+        throw new Error('Page 2 content not found');
+      }
+
+      // Switch back to the original page
+      console.log('Switching back to original page:', originalPage);
+      setCurrentPage(originalPage);
+
+      // Wait for the render to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Now we'll manually update the auto-populated fields in the cloned form1
+      // This is more reliable than trying to render a React component in a detached DOM
+
+      // Enhanced function to update input values in the cloned form
+      // This adds both input values and visible text elements to ensure PDF capture
+      const updateFormValues = (form: HTMLElement) => {
+        // Helper function to update an input and add a visible text element
+        const updateInputWithVisibleText = (
+          selector: string,
+          value: string,
+          parent: HTMLElement
+        ) => {
+          const input = parent.querySelector(selector) as HTMLInputElement;
+          if (input) {
+            // Update the input value
+            input.value = value;
+            input.setAttribute('value', value);
+
+            // Create a visible text element that will definitely show in the PDF
+            const textDiv = document.createElement('div');
+            textDiv.textContent = value;
+            textDiv.style.position = 'absolute';
+            textDiv.style.left = '0';
+            textDiv.style.top = '0';
+            textDiv.style.width = '100%';
+            textDiv.style.height = '100%';
+            textDiv.style.display = 'flex';
+            textDiv.style.alignItems = 'center';
+            textDiv.style.justifyContent = 'flex-start';
+            textDiv.style.paddingLeft = '5px';
+            textDiv.style.pointerEvents = 'none';
+            textDiv.style.color = '#000';
+            textDiv.style.fontWeight = 'normal';
+            textDiv.style.fontSize = '12pt';
+            textDiv.style.fontFamily = 'Arial, sans-serif';
+            textDiv.style.zIndex = '999';
+
+            // Create a wrapper to position the text properly
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.style.width = '100%';
+            wrapper.style.height = '100%';
+
+            // Replace the input with our wrapper containing both input and text
+            if (input.parentNode) {
+              wrapper.appendChild(input.cloneNode(true));
+              wrapper.appendChild(textDiv);
+              input.parentNode.replaceChild(wrapper, input);
+            }
+          }
+        };
+
+        // Update all the auto-populated fields
+        updateInputWithVisibleText('.detail-line:nth-child(2) .input-line', debitParticulars, form);
+        updateInputWithVisibleText('.detail-line:nth-child(3) .input-line', payableTo, form);
+        updateInputWithVisibleText('.authority-text-cell .input-line', authorityDescription, form);
+        updateInputWithVisibleText('.prep-line:nth-child(1) .input-line', preparedBy, form);
+        updateInputWithVisibleText('.prep-line:nth-child(2) .input-line', checkedBy, form);
+      };
+
+      // Update the values in the form1Clone
+      updateFormValues(form1Clone);
+
+      // Add the cloned forms to their containers
+      form1Container.appendChild(form1Clone);
+      form2Container.appendChild(form2Clone);
+
+      // Wait for the forms to render
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Create the final pages for the PDF with exact styling preservation
+      console.log('Creating final pages for PDF with preserved styling');
+
+      // Create page 1 (FormNew1)
       const page1 = document.createElement('div');
       page1.className = 'voucher-page page1';
-      page1.innerHTML = document.querySelector('.page1 .form-container')?.outerHTML || '';
 
+      // Use the form1Clone directly since it already has the complete content with styles
+      console.log('Adding form1 content to page1');
+      // We need to extract the form-container from form1Clone
+      const form1ContainerElement = form1Clone.querySelector('.form-container');
+      if (form1ContainerElement) {
+        // Deep clone to preserve all styles and attributes
+        page1.appendChild(form1ContainerElement.cloneNode(true));
+      } else {
+        console.error('Form container not found in form1Clone, using innerHTML as fallback');
+        // Fallback to using the innerHTML directly
+        const formContainer = document.createElement('div');
+        formContainer.className = 'form-container';
+        formContainer.innerHTML = form1Clone.innerHTML;
+        page1.appendChild(formContainer);
+      }
+
+      // Create page 2 (FormNew2)
       const page2 = document.createElement('div');
       page2.className = 'voucher-page page2';
-      page2.innerHTML = document.querySelector('.page2 .form-container')?.outerHTML || '';
+
+      // Use the form2Clone directly since it already has the complete content with styles
+      console.log('Adding form2 content to page2');
+      // We need to extract the form-container from form2Clone
+      const form2ContainerElement = form2Clone.querySelector('.form-container');
+      if (form2ContainerElement) {
+        // Deep clone to preserve all styles and attributes
+        page2.appendChild(form2ContainerElement.cloneNode(true));
+      } else {
+        console.error('Form container not found in form2Clone, using innerHTML as fallback');
+        // Fallback to using the innerHTML directly
+        const formContainer = document.createElement('div');
+        formContainer.className = 'form-container';
+        formContainer.innerHTML = form2Clone.innerHTML;
+        page2.appendChild(formContainer);
+      }
+
+      // Verify that the pages are different
+      if (page1.innerHTML === page2.innerHTML) {
+        console.error('WARNING: Page 1 and Page 2 have identical content!');
+      } else {
+        console.log('Verified: Page 1 and Page 2 have different content');
+      }
+
+      // Log the structure of both pages for debugging
+      console.log('Page 1 structure:', page1.innerHTML.substring(0, 100) + '...');
+      console.log('Page 2 structure:', page2.innerHTML.substring(0, 100) + '...');
+
+      // Clean up temporary elements
+      document.body.removeChild(tempContainer);
 
       // Add both pages to the container
       container.appendChild(page1);
       container.appendChild(page2);
+
+      // We've already applied text content in the updateFormValues function
+      // No need for additional text nodes here
 
       // Add necessary styles
       const styleElement = document.createElement('style');
@@ -92,9 +410,34 @@ const VoucherTemplate: React.FC<VoucherTemplateProps> = ({ formData, onPreview, 
         .voucher-page {
           page-break-after: always;
           background-color: white;
+          margin-bottom: 20px;
         }
         .voucher-page:last-child {
           page-break-after: avoid;
+          margin-bottom: 0;
+        }
+        .voucher-page.page1 {
+          margin-bottom: 50px; /* Extra space after first page */
+        }
+        .voucher-page.page2 {
+          padding-top: 20px; /* Space at top of second page */
+        }
+
+        /* Special styles for FormNew2 content in PDF */
+        .pdf-page-2 .form-container {
+          font-family: var(--primary-font);
+          color: var(--text-color);
+        }
+
+        /* Ensure FormNew2 specific elements are properly styled */
+        .pdf-page-2 .form-section,
+        .pdf-page-2 .witnesses-section,
+        .pdf-page-2 .stamp-and-signature-area-right,
+        .pdf-page-2 .paying-officer-boxed-section,
+        .pdf-page-2 .warrant-section,
+        .pdf-page-2 .form-footer {
+          display: block !important;
+          visibility: visible !important;
         }
         @media print {
           .form-container {
@@ -102,47 +445,145 @@ const VoucherTemplate: React.FC<VoucherTemplateProps> = ({ formData, onPreview, 
             background-color: white;
             box-shadow: none;
             border: none;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+          }
+          body {
+            background-color: white;
+          }
+          /* Copy all styles from both forms to ensure they render correctly */
+          :root {
+            --primary-font: 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Roboto', Arial, sans-serif;
+            --text-color: #000000;
+            --line-color: #333333;
+            --border-color: #cccccc;
+            --stamp-box-border-color: #333333;
+            --font-size-normal: 10pt;
+            --font-size-small: 8pt;
+            --font-size-x-small: 7.5pt;
+            --font-size-large-brace: 3.8em;
+            --spacing-unit: 8px;
+            --line-height-normal: 1.5;
+            --line-height-tight: 1.25;
+            --line-height-very-tight: 1.1;
+            --dot-vertical-offset: -4px;
+            --primary-text-color: #000000;
+            --background-color: #ffffff;
+            --light-grey-background: #f0f0f0;
+            --form-width: 850px;
+            --font-size-large: 18px;
+            --font-size-xlarge: 24px;
+            --font-family-sinhala: 'Noto Sans Sinhala', 'Iskoola Pota', Arial, sans-serif;
+            --font-family-tamil: 'Noto Sans Tamil', 'Latha', Arial, sans-serif;
+            --font-family-english: Arial, Helvetica, sans-serif;
+            --font-family-brace: 'Times New Roman', Times, serif;
           }
         }
       `;
       container.appendChild(styleElement);
+
+      // Copy all stylesheets from the document to ensure proper styling
+      document.querySelectorAll('style, link[rel="stylesheet"]').forEach(styleSheet => {
+        container.appendChild(styleSheet.cloneNode(true));
+      });
+
+      // Ensure FormNew2 styles are included
+      // This is critical for proper rendering of page 2
+      const formNew2Styles = document.querySelectorAll('.page2 style');
+      if (formNew2Styles.length > 0) {
+        console.log('Found FormNew2 styles, adding them to the container');
+        formNew2Styles.forEach(styleSheet => {
+          container.appendChild(styleSheet.cloneNode(true));
+        });
+      } else {
+        console.warn('No FormNew2 styles found, page 2 may not render correctly');
+      }
 
       // Get current date for filename
       const today = new Date();
       const dateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
       const filename = `Voucher_${dateStr}.pdf`;
 
-      // Options for html2pdf.js
+      // Enhanced options for html2pdf.js with better rendering settings
       const opt = {
         margin: [0.5, 0.2, 0.5, 0.2], // [top, right, bottom, left] in inches
         filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg', quality: 1.0 }, // Maximum quality
         html2canvas: {
-          scale: 2, // Higher scale for better quality
+          scale: 3, // Higher scale for better quality and text rendering
           useCORS: true,
-          logging: false,
+          logging: true, // Enable logging for debugging
           letterRendering: true,
           allowTaint: true, // Allow cross-origin images
           backgroundColor: '#ffffff', // Ensure white background
           removeContainer: true, // Remove the cloned element after rendering
           foreignObjectRendering: false, // Disable foreignObject rendering which can cause issues
-          imageTimeout: 15000, // Increase timeout for images
+          imageTimeout: 30000, // Increase timeout for images
+          onclone: function(clonedDoc: Document) {
+            // Force all input values to be visible in the cloned document
+            const inputs = clonedDoc.querySelectorAll('input[type="text"]') as NodeListOf<HTMLInputElement>;
+            inputs.forEach(input => {
+              // Create a visible text element that shows the input value
+              if (input.value) {
+                const textSpan = clonedDoc.createElement('span');
+                textSpan.textContent = input.value;
+                textSpan.style.position = 'absolute';
+                textSpan.style.left = '0';
+                textSpan.style.top = '0';
+                textSpan.style.width = '100%';
+                textSpan.style.height = '100%';
+                textSpan.style.display = 'flex';
+                textSpan.style.alignItems = 'center';
+                textSpan.style.paddingLeft = '5px';
+                textSpan.style.pointerEvents = 'none';
+                textSpan.style.color = '#000';
+                textSpan.style.fontWeight = 'normal';
+                textSpan.style.fontSize = '12pt';
+                textSpan.style.fontFamily = 'Arial, sans-serif';
+
+                // Insert the text span as a sibling to the input
+                if (input.parentNode) {
+                  input.parentNode.insertBefore(textSpan, input.nextSibling);
+                }
+              }
+            });
+          }
         },
         jsPDF: {
           unit: 'in',
           format: 'a3',
           orientation: 'portrait',
-          compress: true,
-          precision: 16
+          compress: false, // Disable compression for better quality
+          precision: 16,
+          hotfixes: ['px_scaling'], // Apply hotfixes for better rendering
+          putOnlyUsedFonts: true, // Only include used fonts to reduce file size
+          floatPrecision: 16 // Higher precision for better rendering
         },
         pagebreak: {
           mode: ['avoid-all', 'css', 'legacy'] // Helps with page breaks
         }
       };
 
+      // Add a class to identify each page for page breaks
+      page1.classList.add('pdf-page-1');
+      page2.classList.add('pdf-page-2');
+
       try {
-        // Use html2pdf to generate and download the PDF
+        // Add a small delay to ensure all content is fully rendered
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Use html2pdf with enhanced error handling
+        // Note: We're using the simpler API to avoid TypeScript errors
+        // The html2pdf library doesn't have proper TypeScript definitions for all methods
+        console.log('Starting PDF generation...');
+
+        // We can't add metadata directly due to TypeScript limitations
+        // Instead, we'll focus on ensuring the content renders correctly
+
         await html2pdf().from(container).set(opt).save();
+
+        console.log('PDF generation completed successfully');
       } catch (htmlToPdfError) {
         console.error('Error with html2pdf, trying fallback approach:', htmlToPdfError);
 

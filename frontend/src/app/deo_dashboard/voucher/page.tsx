@@ -75,12 +75,6 @@ export default function GenerateVoucherPage() {
   // Updated: Removed flex-col md:flex-row, added relative for button positioning
   const dashboardContentClasses = "flex bg-white rounded-xl overflow-hidden shadow-lg border-2 border-[#0070f3] relative"; 
   
-  // Sidebar classes are no longer needed
-  // const sidebarClasses = "w-full md:w-52 bg-[#f8e1f4] py-5 border-r-0 md:border-r-2 border-[#0070f3] flex-shrink-0";
-  // const sidebarItemClasses = "flex items-center py-3 px-5 cursor-pointer transition-colors duration-200 hover:bg-[#f0d0f0]";
-  // const sidebarItemActiveClass = "bg-[#e6b3d9] font-bold";
-  // const sidebarIconClasses = "mr-2.5 text-xl";
-  // const sidebarTextClasses = "text-base";
 
   const mainPanelClasses = "flex-1 p-5 bg-white"; // Will take full width of dashboardContentClasses
 

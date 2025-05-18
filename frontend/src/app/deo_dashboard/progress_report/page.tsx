@@ -23,6 +23,7 @@ export default function GenerateProgressReportPage() {
     accountantSignature: "",
     approvedStudentsValue: "112" // Added for consistency, assuming it's a string
   });
+  const [totalAmount, setTotalAmount] = useState<string>("0.00");
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pathname = usePathname();
@@ -113,6 +114,24 @@ export default function GenerateProgressReportPage() {
     }
   };
 
+  // Calculate the total amount from report data
+  const calculateTotalAmount = (data: any[]) => {
+    try {
+      // Sum up all amount values, converting them to numbers
+      const sum = data.reduce((total, row) => {
+        // Parse the amount string to a number, handling potential errors
+        const amount = parseFloat(row.amount) || 0;
+        return total + amount;
+      }, 0);
+
+      // Format the total with 2 decimal places
+      setTotalAmount(sum.toFixed(2));
+    } catch (error) {
+      console.error('Error calculating total amount:', error);
+      setTotalAmount("0.00"); // Default to 0.00 if calculation fails
+    }
+  };
+
   // Fetch daily data for the progress report
   const fetchDailyData = async () => {
     try {
@@ -160,6 +179,9 @@ export default function GenerateProgressReportPage() {
           ...prev,
           reportRows: formattedData
         }));
+
+        // Calculate total amount
+        calculateTotalAmount(formattedData);
       } else {
         throw new Error(result.message || 'Failed to fetch data');
       }
@@ -294,6 +316,13 @@ export default function GenerateProgressReportPage() {
                 justify-content: center !important;
                 height: 100% !important;
               }
+              /* Style for the total row */
+              tr.total-row td {
+                font-weight: bold !important;
+              }
+              tr.total-row td:nth-child(6) {
+                background-color: #f0f0f0 !important;
+              }
             `;
             clonedDoc.head.appendChild(styleElement);
           }
@@ -389,6 +418,13 @@ export default function GenerateProgressReportPage() {
               flex-direction: column;
               justify-content: center;
               height: 100%;
+            }
+            /* Style for the total row */
+            tr.total-row td {
+              font-weight: bold;
+            }
+            tr.total-row td:nth-child(6) {
+              background-color: #f0f0f0;
             }
             @media print {
               body {
@@ -535,11 +571,25 @@ export default function GenerateProgressReportPage() {
             tbody.appendChild(newRow);
           });
 
-          // Empty rows have been removed to make the report cleaner and more concise
+          // Add a total row at the bottom
+          const totalRow = document.createElement('tr');
+          totalRow.className = `${trClasses} total-row`; // Apply classes to the <tr> element
+          totalRow.setAttribute('style', `${trStyleStr} font-weight: bold; background-color: #f9f9f9;`); // Apply inline styles for PDF
+
+          totalRow.innerHTML = `
+            <td class="${tdClasses}" style="${tdStyleStr} font-weight: bold; text-align: right;" colspan="5">
+              <span class="${cellContentClasses}" style="font-weight: bold;">Total Amount:</span>
+            </td>
+            <td class="${tdClasses}" style="${tdStyleStr} font-weight: bold; background-color: #f0f0f0;">
+              <span class="${cellContentClasses}" style="font-weight: bold;" id="total-amount-value">${totalAmount}</span>
+            </td>
+            <td class="${tdClasses}" style="${tdStyleStr}" colspan="4"></td>
+          `;
+          tbody.appendChild(totalRow);
         }
       }, 100);
     }
-  }, [loading, reportData, user]); // Added user to dependency array as it might affect reportData indirectly or if used inside
+  }, [loading, reportData, totalAmount, user]); // Added totalAmount to update when it changes
 
   if (loading) {
     return (

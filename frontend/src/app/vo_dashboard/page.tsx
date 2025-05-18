@@ -1,297 +1,244 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-// Image component is no longer needed for this dashboard page's direct content
-import { usePathname } from 'next/navigation';
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { UserCircle, FileText, Home, Info, LogOut, FileSpreadsheet, Loader2 } from "lucide-react"
+
+type User = {
+  id?: number
+  username?: string
+  role?: string
+  name?: string
+}
 
 export default function VerificationOfficerDashboard() {
-  // User state can be used by pages navigated to from here
-  const [user, setUser] = useState<{id?: number; username?: string; role?: string}>({
-    // id: 1, // Example, should be set from auth
-    // username: 'verifio', // Example, should be set from auth
-    // role: 'verificationOfficer' // Example, should be set from auth
-  });
-  const [loading, setLoading] = useState(true);
-  const pathname = usePathname();
-  // const router = useRouter(); // Uncomment if needed for auth redirection
+  const [user, setUser] = useState<User>({})
+  const [loading, setLoading] = useState(true)
+  const pathname = usePathname()
+  const router = useRouter()
 
   useEffect(() => {
     // Simulate loading delay
     const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500); // Shorter delay
+      setLoading(false)
+    }, 500)
 
     // --- Begin Example Authentication Check ---
     // This is a placeholder. Replace with your actual authentication logic.
     // try {
     //   const storedUser = localStorage.getItem('user');
     //   if (!storedUser) {
-    //     // router.push('/login'); // Uncomment and import useRouter
+    //     router.push('/login');
     //     console.error("No user found, redirecting to login.");
     //     return;
     //   }
     //   const userData = JSON.parse(storedUser);
     //   if (userData.role !== 'verificationOfficer') {
     //     alert('Access Denied. Only Verification Officers can access this page.');
-    //     // router.push('/'); // Redirect to home or another appropriate page
+    //     router.push('/');
     //     console.error("User role not verificationOfficer, access denied.");
     //     return;
     //   }
     //   setUser(userData);
     // } catch (error) {
     //   console.error("Authentication error:", error);
-    //   // router.push('/login');
+    //   router.push('/login');
     // } finally {
     //   setLoading(false);
     // }
     // --- End Example Authentication Check ---
 
+    return () => clearTimeout(timer)
+  }, [])
 
-    return () => clearTimeout(timer);
-  }, []); // Add 'router' to dependency array if used in auth check
+  // Card data with improved structure
+  const cardData = [
+    {
+      title: "Profile",
+      description: "View and manage your user profile and account settings",
+      icon: <UserCircle className="h-12 w-12" />,
+      href: "/vo_dashboard/profile",
+      ariaLabel: "View User Profile",
+      styleKey: "profile",
+    },
+    {
+      title: "Voucher",
+      description: "Review, verify, and process nutrition program vouchers",
+      icon: <FileText className="h-12 w-12" />,
+      href: "/vo_dashboard/voucher",
+      ariaLabel: "View and Process Vouchers",
+      styleKey: "voucher",
+    },
+  ]
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="loading-message">Loading...</div>
+      <div className="min-h-screen bg-[#fffbe6] flex flex-col justify-center items-center p-4">
+        <Loader2 className="h-12 w-12 text-[#d0c670] animate-spin mb-4" />
+        <p className="text-xl font-medium text-[#4A5568]">Loading dashboard...</p>
       </div>
-    );
+    )
   }
-  const cardData = [
-    { title: "Profile", icon: "👤", href: "/vo_dashboard/profile", ariaLabel: "View User Profile", styleKey: "profile" },
-    { title: "Voucher", icon: "📄", href: "/vo_dashboard/voucher", ariaLabel: "View and Process Vouchers", styleKey: "voucher" },
-  ];
 
   return (
-    <div className="container">
-      {/* Navigation Bar */}
-      <nav className="navbar">
-        <div className="brand">Goverment Nutrition Program</div>
-        <div className="nav-links">
-          <Link href="/" className={`nav-link ${pathname === "/" ? "highlight" : ""}`}>
-            <span className="link-text">Home</span>
-          </Link>
-          <Link href="/about" className={`nav-link ${pathname === "/about" ? "highlight" : ""}`}>
-            <span className="link-text">About Program</span>
-          </Link>
-          <Link href="/" className={`nav-link ${pathname === "/" ? "highlight" : ""}`}>
-            <span className="link-text">Logout</span>
-          </Link>
-          <Link href="/gazette" className={`nav-link ${pathname === "/gazette" ? "highlight" : ""}`}>
-            <span className="link-text">Gazette</span>
-          </Link>
+    <div className="min-h-screen bg-[#fffbe6] font-sans">
+      {/* Header with Navigation */}
+      <header className="bg-[rgb(244,237,174)] shadow-md sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <nav className="flex flex-wrap items-center justify-between py-4">
+            <div className="flex items-center flex-shrink-0">
+              <span className="text-xl font-bold text-gray-800">Government Nutrition Program</span>
+            </div>
+
+            {/* Mobile menu button - would be implemented with state toggle */}
+            <div className="block md:hidden">
+              <button
+                type="button"
+                className="p-2 rounded-md text-gray-800 hover:bg-[#f0e68c] focus:outline-none focus:ring-2 focus:ring-[#d0c670]"
+                aria-expanded="false"
+              >
+                <span className="sr-only">Open menu</span>
+                <svg
+                  className="h-6 w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Desktop navigation */}
+            <div className="hidden md:flex md:items-center md:space-x-4">
+              <NavLink href="/" icon={<Home size={16} />} isActive={pathname === "/"}>
+                Home
+              </NavLink>
+              <NavLink href="/about" icon={<Info size={16} />} isActive={pathname === "/about"}>
+                About Program
+              </NavLink>
+              <NavLink href="/gazette" icon={<FileSpreadsheet size={16} />} isActive={pathname === "/gazette"}>
+                Gazette
+              </NavLink>
+              <button
+                onClick={() => router.push("/login")}
+                className="inline-flex items-center py-2 px-4 bg-white hover:bg-red-50 text-red-600 rounded-full text-sm font-bold transition-all duration-200"
+              >
+                <LogOut size={16} className="mr-1" />
+                Logout
+              </button>
+            </div>
+          </nav>
         </div>
-      </nav>
+      </header>
 
-      {/* Welcome Header */}
-      <div className="welcome-header">
-        <h1>Welcome to Verification Officer Dashboard</h1>
-      </div>
-
-      {/* Main Content Area with Cards */}
-      <div className="dashboard-main-area">
-        <div className="card-grid">
-          {cardData.map((card) => (
-            <Link key={card.title} href={card.href} className={`dashboard-card card-${card.styleKey}`}>
-              <div className="card-content">
-                <span role="img" aria-label={card.ariaLabel} className="card-icon">
-                  {card.icon}
-                </span>
-                <h3 className="card-title">{card.title}</h3>
-              </div>
-            </Link>
-          ))}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Welcome Header with Card */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8 border-l-4 border-[#d0c670]">
+          <div className="flex items-center">
+            <div className="bg-[#f0e68c] p-3 rounded-full mr-4">
+              <UserCircle className="h-6 w-6 text-[#4A5568]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-[#4A5568]">Welcome to Verification Officer Dashboard</h1>
+              <p className="text-gray-600">Verify and process nutrition program vouchers</p>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <style jsx>{`
-        .container {
-          max-width: 100%;
-          min-height: 100vh;
-          padding: 20px;
-          background-color: #fffbe6; /* Light yellow background */
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Common sans-serif font */
-        }
+        {/* Dashboard Cards */}
+        <div className="bg-white rounded-xl shadow-md p-8 border-2 border-[#0070f3]">
+          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            {cardData.map((card) => (
+              <Link
+                key={card.title}
+                href={card.href}
+                className={`group block p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border border-${
+                  card.styleKey === "profile" ? "[#b2ebf2]" : "[#f8bbd0]"
+                } bg-${card.styleKey === "profile" ? "[#e0f7fa]" : "[#fce4ec]"}`}
+                aria-label={card.ariaLabel}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div
+                    className={`mb-4 text-${
+                      card.styleKey === "profile" ? "[#00796b]" : "[#c2185b]"
+                    } transition-transform duration-300 group-hover:scale-110`}
+                  >
+                    {card.icon}
+                  </div>
+                  <h3
+                    className={`text-xl font-semibold mb-3 text-${card.styleKey === "profile" ? "[#00796b]" : "[#c2185b]"}`}
+                  >
+                    {card.title}
+                  </h3>
+                  <p className="text-gray-600 mb-4">{card.description}</p>
+                  <span
+                    className={`inline-flex items-center text-${
+                      card.styleKey === "profile" ? "[#00796b]" : "[#c2185b]"
+                    } font-medium`}
+                  >
+                    Access
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </main>
 
-        .navbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 15px 25px;
-          margin-bottom: 20px;
-          background-color:rgb(244, 237, 174); /* Khaki yellow for nav bar */
-          border-radius: 8px;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .brand {
-          font-size: 20px;
-          font-weight: bold;
-          color: #333;
-        }
-
-        .nav-links {
-          display: flex;
-          gap: 15px;
-        }
-
-        .nav-link {
-          text-decoration: none;
-        }
-
-        .link-text {
-          display: inline-block;
-          padding: 5px 15px;
-          background-color: #ffffff;
-          border-radius: 20px;
-          color: #000000;
-          font-size: 14px;
-          font-weight: bold;
-          transition: all 0.2s ease-in-out;
-        }
-
-        .nav-link.highlight .link-text,
-        .nav-link:hover .link-text {
-          background-color: #f0e68c; /* Darker yellow */
-          border: 1px solid #d0c670; /* Complementary border */
-        }
-
-        .welcome-header {
-          text-align: center;
-          margin-bottom: 25px; /* Increased margin */
-          color: #4A5568; /* Darker text for better readability */
-        }
-        .welcome-header h1 {
-          font-size: 26px; /* Slightly larger */
-          font-weight: 600; /* Semibold */
-        }
-
-        .dashboard-main-area {
-          background-color: #ffffff;
-          border-radius: 15px;
-          padding: 25px; /* Increased padding */
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Softer shadow */
-          border: 2px solid #0070f3; /* Blue border as per user preference */
-          margin-top: 20px;
-        }
-
-        .card-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Min card width */
-          gap: 25px; /* Increased gap */
-          justify-content: center;
-        }
-        /* Specific layout for 2 cards on medium screens */
-        @media (min-width: 600px) and (max-width: 900px) {
-            .card-grid {
-                grid-template-columns: repeat(2, minmax(220px, 300px));
-            }
-        }
-         /* Specific layout for 2 cards on larger screens, more centered */
-        @media (min-width: 901px) {
-            .card-grid {
-                grid-template-columns: repeat(2, minmax(250px, 350px));
-                max-width: 800px; /* Max width for the grid itself */
-                margin-left: auto;
-                margin-right: auto;
-            }
-        }
-
-
-        .dashboard-card {
-          display: block;
-          padding: 25px; /* Increased padding */
-          border-radius: 12px; /* More rounded corners */
-          text-decoration: none;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-          transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-          text-align: center;
-          border-width: 1px;
-          border-style: solid;
-        }
-
-        .dashboard-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 6px 14px rgba(0,0,0,0.12);
-        }
-
-        .card-content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .card-icon {
-          font-size: 48px; /* Larger icon */
-          margin-bottom: 15px;
-        }
-
-        .card-title {
-          font-size: 20px; /* Slightly larger title */
-          font-weight: 600;
-          margin: 0;
-        }
-
-        /* Visually distinct card styles */
-        .card-profile {
-          background-color: #e0f7fa; /* Lighter cyan */
-          border-color: #b2ebf2; /* Cyan border */
-        }
-        .card-profile .card-icon, .card-profile .card-title {
-          color: #00796b; /* Teal text */
-        }
-
-        .card-voucher {
-          background-color: #fce4ec; /* Lighter pink */
-          border-color: #f8bbd0; /* Pink border */
-        }
-        .card-voucher .card-icon, .card-voucher .card-title {
-          color: #c2185b; /* Darker pink text */
-        }
-
-        .loading-message {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          height: 100vh;
-          font-size: 24px; /* Larger loading text */
-          color: #555;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          .navbar {
-            flex-direction: column;
-            align-items: center; /* Center navbar items on mobile */
-          }
-          .brand {
-            margin-bottom: 10px; /* Space between brand and links */
-          }
-          .nav-links {
-            margin-top: 10px;
-            flex-wrap: wrap;
-            justify-content: center; /* Center nav links */
-          }
-          .welcome-header h1 {
-            font-size: 22px; /* Adjust welcome header for mobile */
-          }
-          .dashboard-main-area {
-            padding: 20px; /* Adjust padding for mobile */
-          }
-          .card-grid {
-            grid-template-columns: 1fr; /* Stack cards on small screens */
-            gap: 20px;
-          }
-          .card-icon {
-            font-size: 40px;
-          }
-          .card-title {
-            font-size: 18px;
-          }
-        }
-      `}</style>
+      {/* Footer */}
+      <footer className="bg-[rgb(244,237,174)] py-4 mt-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <p className="text-center text-gray-700 text-sm">
+            &copy; 2025 Government Nutrition Program. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
-  );
+  )
+}
+
+// Reusable NavLink component
+function NavLink({
+  href,
+  icon,
+  isActive,
+  children,
+}: {
+  href: string
+  icon?: React.ReactNode
+  isActive: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <Link href={href} className="group">
+      <span
+        className={`
+          inline-flex items-center py-2 px-4 rounded-full text-sm font-bold transition-all duration-300
+          ${
+            isActive
+              ? "bg-[#f0e68c] border border-[#d0c670] text-black transform scale-105"
+              : "bg-white text-black hover:bg-[#f0e68c]"
+          }
+        `}
+      >
+        {icon && <span className="mr-1">{icon}</span>}
+        {children}
+      </span>
+    </Link>
+  )
 }

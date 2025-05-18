@@ -676,9 +676,52 @@ export default function GenerateVoucherPage() {
     }
   };
 
-  const handleSendToVerify = () => {
-    console.log('Send to Verify button clicked. Voucher data:', formData);
-    alert('Voucher sent to Verification Officer successfully!');
+  const handleSendToVerify = async () => {
+    try {
+      // First, generate a file path for the voucher
+      // In a real implementation, this would be the path to the actual PDF file
+      const filePath = `voucher_${formData.voucherNumber || 'unknown'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+      // Get the token from localStorage
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) {
+        console.error('Authentication required');
+        alert('Authentication required. Please log in again.');
+        return;
+      }
+
+      const userData = JSON.parse(storedUser);
+      const token = userData.token;
+
+      if (!token) {
+        console.error('Authentication token not found');
+        alert('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      // Send voucher data to the server
+      const response = await fetch('http://localhost:3001/api/vouchers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          file_path: filePath
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        alert('Voucher sent to Verification Officer successfully!');
+      } else {
+        throw new Error(result.message || 'Failed to send voucher for verification');
+      }
+    } catch (err: any) {
+      console.error('Error sending voucher for verification:', err);
+      alert(`Failed to send voucher: ${err.message || 'Unknown error'}`);
+    }
   };
 
   const handleRefresh = () => {

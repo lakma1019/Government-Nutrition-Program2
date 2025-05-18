@@ -97,6 +97,7 @@ app.use('/api/user-details', csrfProtection, require('./routes/userDetails'));
 app.use('/api/daily-data', require('./routes/dailyData'));
 app.use('/api/contractors', require('./routes/contractors'));
 app.use('/api/supporters', require('./routes/supporters'));
+app.use('/api/vouchers', require('./routes/vouchers'));
 
 // Default route
 app.get('/', (req, res) => {

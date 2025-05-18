@@ -98,6 +98,10 @@ app.use('/api/daily-data', require('./routes/dailyData'));
 app.use('/api/contractors', require('./routes/contractors'));
 app.use('/api/supporters', require('./routes/supporters'));
 app.use('/api/vouchers', require('./routes/vouchers'));
+app.use('/api/gazettes', require('./routes/gazettes'));
+
+// Test routes (no authentication)
+app.use('/api', require('./routes/testRoutes'));
 
 // Default route
 app.get('/', (req, res) => {

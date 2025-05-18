@@ -36,7 +36,7 @@ export default function GazettePage() {
   });
 
   const [notification, setNotification] = useState<{
-    type: 'success' | 'error' | null;
+    type: 'success' | 'error' | 'warning' | null;
     message: string;
   }>({ type: null, message: '' });
   // Using default values for testing without authentication
@@ -66,7 +66,7 @@ export default function GazettePage() {
 
     try {
       // Fetch gazettes from our server
-      const response = await fetch('http://localhost:3001/api/test-gazette-table'); // Using test endpoint
+      const response = await fetch('http://localhost:3001/api/gazettes'); // Using the main endpoint
 
       if (!response.ok) {
         // Attempt to parse error response body
@@ -88,9 +88,8 @@ export default function GazettePage() {
 
         // Map the gazette data to match our expected format based on new DB schema
         const gazettesData = data.data.map((gazette: any) => {
-          // Use the URL directly from the database
-          const url = gazette.url || gazette.fileUrl ||
-            (gazette.file_path ? `http://localhost:3001/${gazette.file_path.replace(/\\/g, '/')}` : ''); // Ensure forward slashes
+          // Extract URL using the helper function
+          const url = extractUrlFromGazette(gazette);
 
           return {
             id: String(gazette.id), // Ensure ID is string
@@ -130,7 +129,7 @@ export default function GazettePage() {
      setError(null);
 
      try {
-         const response = await fetch('http://localhost:3001/api/test-gazette-table');
+         const response = await fetch('http://localhost:3001/api/gazettes');
 
          if (!response.ok) {
              const errorBody = await response.text();
@@ -149,7 +148,7 @@ export default function GazettePage() {
                  id: String(gazette.id),
                  gazette_name: gazette.gazette_name || gazette.userProvidedName || gazette.name || gazette.title || 'Untitled Gazette',
                  publish_date: gazette.publish_date || gazette.publishDate || '',
-                 url: gazette.url || gazette.fileUrl || (gazette.file_path ? `http://localhost:3001/${gazette.file_path.replace(/\\/g, '/')}` : ''),
+                 url: extractUrlFromGazette(gazette),
                  uploader_name: gazette.uploader_name,
                  is_active: gazette.is_active || 'yes',
                  created_at: gazette.created_at || gazette.uploadDate || gazette.upload_date || '',
@@ -321,35 +320,68 @@ export default function GazettePage() {
           console.log('[GAZETTE] Upload completed successfully');
 
           try {
-            // Get download URL
+            // Get download URL from Firebase Storage
+            // This returns the correct URL format: https://firebasestorage.googleapis.com/v0/b/[project-id].appspot.com/o/[path]?alt=media&token=[token]
             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
             console.log('[GAZETTE] Download URL:', downloadURL);
 
-            // Now save the metadata to the server database
-            const formData = new FormData();
-            formData.append('gazette_name', uploadForm.gazette_name);
-            formData.append('publish_date', uploadForm.publishDate || new Date().toISOString().split('T')[0]);
-            formData.append('url', downloadURL);
-            formData.append('uploader_name', uploaderName);
-            formData.append('is_active', uploadForm.is_active);
+            // Prepare the metadata for the server database
 
-            // Save metadata to server (optional - can be implemented later)
+            // Save metadata to MySQL database
             try {
-              const response = await fetch('http://localhost:3001/api/gazettes', {
-                method: 'POST',
-                body: formData,
+              console.log('[GAZETTE] Saving metadata to database with fields:', {
+                gazette_name: uploadForm.gazette_name,
+                publish_date: uploadForm.publishDate || new Date().toISOString().split('T')[0],
+                url: downloadURL,
+                uploader_name: uploaderName,
+                is_active: uploadForm.is_active
               });
 
+              const response = await fetch('http://localhost:3001/api/gazettes', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  gazette_name: uploadForm.gazette_name,
+                  publish_date: uploadForm.publishDate || new Date().toISOString().split('T')[0],
+                  url_data: {
+                    downloadURL: downloadURL,
+                    fileName: uploadForm.pdfFile?.name,
+                    filePath: filePath,
+                    contentType: uploadForm.pdfFile?.type,
+                    size: uploadForm.pdfFile?.size,
+                    uploadTime: new Date().toISOString()
+                  },
+                  uploader_name: uploaderName,
+                  is_active: uploadForm.is_active
+                }),
+              });
+
+              const responseData = await response.json().catch(() => null);
+
               if (response.ok) {
-                console.log('[GAZETTE] Metadata saved to server');
+                console.log('[GAZETTE] Metadata saved to database successfully:', responseData);
+                setNotification({
+                  type: 'success',
+                  message: 'Gazette PDF uploaded to Firebase and metadata saved to database!'
+                });
               } else {
-                console.warn('[GAZETTE] Failed to save metadata to server, but file was uploaded to Firebase');
+                console.warn('[GAZETTE] Failed to save metadata to database:', responseData);
+                setNotification({
+                  type: 'warning',
+                  message: 'Gazette PDF uploaded to Firebase but failed to save metadata to database. Please contact administrator.'
+                });
               }
             } catch (serverErr) {
-              console.warn('[GAZETTE] Error saving metadata to server, but file was uploaded to Firebase:', serverErr);
+              console.error('[GAZETTE] Error saving metadata to database:', serverErr);
+              setNotification({
+                type: 'warning',
+                message: 'Gazette PDF uploaded to Firebase but failed to save metadata to database due to an error.'
+              });
             }
 
-            setNotification({ type: 'success', message: 'Gazette PDF uploaded successfully to Firebase!' });
+            // Close the modal and clear the form (notification is already set above)
             setShowUploadModal(false);
             setUploadForm({ // Clear form
               gazette_name: '',
@@ -389,6 +421,34 @@ export default function GazettePage() {
   // The list displayed is directly the gazettes state after fetching/searching
   const displayedGazettes = gazettes;
 
+
+  // Helper function to extract URL from gazette data
+  const extractUrlFromGazette = (gazette: any): string => {
+    // Extract URL from the JSON data or use the url field
+    let url = '';
+
+    if (gazette.url_data) {
+      try {
+        // If url_data is a string, parse it
+        const urlData = typeof gazette.url_data === 'string'
+          ? JSON.parse(gazette.url_data)
+          : gazette.url_data;
+
+        // Get the download URL from the JSON data
+        url = urlData.downloadURL || urlData.url || '';
+      } catch (e) {
+        console.error('[GAZETTE] Error parsing URL data:', e);
+      }
+    }
+
+    // Fallback to url field or other properties if url_data parsing failed
+    if (!url) {
+      url = gazette.url || gazette.fileUrl ||
+        (gazette.file_path ? `http://localhost:3001/${gazette.file_path.replace(/\\/g, '/')}` : '');
+    }
+
+    return url;
+  };
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -553,6 +613,7 @@ export default function GazettePage() {
   const notificationBaseClasses = "flex items-center p-4 mb-6 rounded-lg border relative";
   const notificationSuccessClasses = "bg-green-50 text-green-800 border-green-200";
   const notificationErrorClasses = "bg-red-50 text-red-800 border-red-200";
+  const notificationWarningClasses = "bg-yellow-50 text-yellow-800 border-yellow-200";
   const notificationIconClasses = "mr-3 flex-shrink-0";
   const closeNotificationClasses = "absolute right-2 top-2 text-gray-500 hover:text-gray-700 text-xl font-bold cursor-pointer";
 
@@ -756,9 +817,19 @@ export default function GazettePage() {
 
         {/* Notification Message */}
         {notification.type && (
-          <div className={`${notificationBaseClasses} ${notification.type === 'success' ? notificationSuccessClasses : notificationErrorClasses}`}>
+          <div className={`${notificationBaseClasses} ${
+            notification.type === 'success'
+              ? notificationSuccessClasses
+              : notification.type === 'warning'
+                ? notificationWarningClasses
+                : notificationErrorClasses
+          }`}>
             <span className={notificationIconClasses}>
-              {notification.type === 'success' ? '✅' : '❌'}
+              {notification.type === 'success'
+                ? '✅'
+                : notification.type === 'warning'
+                  ? '⚠️'
+                  : '❌'}
             </span>
             <span className="flex-grow">{notification.message}</span> {/* Allow message to take space */}
             <button

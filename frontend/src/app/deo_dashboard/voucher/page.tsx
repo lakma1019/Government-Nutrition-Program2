@@ -14,6 +14,16 @@ export default function GenerateVoucherPage() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const voucherContentRef = useRef<HTMLDivElement>(null);
 
+  // State variables for PDF upload modal
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error' | 'warning' | null;
+    message: string;
+  }>({ type: null, message: '' });
+
   // State variables to store auto-populated field values from FormNew1
   const [debitParticulars, setDebitParticulars] = useState('');
   const [payableTo, setPayableTo] = useState('');
@@ -365,51 +375,188 @@ export default function GenerateVoucherPage() {
     }
   };
 
-  const handleSendToVerify = async () => {
-    try {
-      // First, generate a file path for the voucher
-      // In a real implementation, this would be the path to the actual PDF file
-      const filePath = `voucher_${formData.voucherNumber || 'unknown'}_${new Date().toISOString().split('T')[0]}.pdf`;
+  const handleSendToVerify = () => {
+    // First generate the PDF
+    generatePDF();
 
-      // Get the token from localStorage
-      const storedUser = localStorage.getItem('user');
-      if (!storedUser) {
-        console.error('Authentication required');
-        alert('Authentication required. Please log in again.');
-        return;
-      }
+    // Then open the upload modal
+    setUploadFile(null);
+    setUploadProgress(0);
+    setNotification({ type: null, message: '' });
+    setShowUploadModal(true);
+  };
 
-      const userData = JSON.parse(storedUser);
-      const token = userData.token;
-
-      if (!token) {
-        console.error('Authentication token not found');
-        alert('Authentication token not found. Please log in again.');
-        return;
-      }
-
-      // Send voucher data to the server
-      const response = await fetch('http://localhost:3001/api/vouchers', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          file_path: filePath
-        })
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        alert('Voucher sent to Verification Officer successfully!');
+  // Handle file change for the upload modal
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        setNotification({ type: 'error', message: 'File size exceeds 10MB limit.' });
+        setUploadFile(null);
+        const fileInput = document.getElementById('voucherPdf') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = '';
+        }
       } else {
-        throw new Error(result.message || 'Failed to send voucher for verification');
+        setUploadFile(file);
+        setNotification({ type: null, message: '' });
       }
+    } else {
+      setUploadFile(null);
+      if (notification.type === 'error' && notification.message.includes('size')) {
+        setNotification({ type: null, message: '' });
+      }
+    }
+  };
+
+  // Handle upload submission
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!uploadFile) {
+      setNotification({ type: 'error', message: 'Please select a PDF file to upload' });
+      return;
+    }
+
+    setNotification({ type: null, message: '' });
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage');
+      const { storage } = await import('@/config/firebase');
+
+      const timestamp = new Date().getTime();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      const fileName = uploadFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+      const filePath = `vouchers/${timestamp}_${randomString}_${fileName}`;
+
+      console.log('[VOUCHER] Uploading file to Firebase:', filePath);
+
+      const metadata = {
+        contentType: uploadFile.type,
+        customMetadata: {
+          voucher_number: formData.voucherNumber || 'unknown',
+          created_at: new Date().toISOString()
+        }
+      };
+
+      const storageRef = ref(storage, filePath);
+      const uploadTask = uploadBytesResumable(storageRef, uploadFile, metadata);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('[VOUCHER] Upload progress:', progress.toFixed(2), '%');
+          setUploadProgress(progress);
+        },
+        (error) => {
+          console.error('[VOUCHER] Upload error:', error);
+          let errorMessage = 'Upload failed: ';
+
+          switch (error.code) {
+            case 'storage/unauthorized':
+              errorMessage += 'User doesn\'t have permission to access the storage';
+              break;
+            case 'storage/canceled':
+              errorMessage += 'Upload was canceled';
+              break;
+            case 'storage/unknown':
+              errorMessage += 'Unknown error occurred';
+              break;
+            default:
+              errorMessage += error.message;
+          }
+
+          setNotification({ type: 'error', message: errorMessage });
+          setIsUploading(false);
+        },
+        async () => {
+          console.log('[VOUCHER] Upload completed successfully');
+
+          try {
+            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+            console.log('[VOUCHER] Download URL:', downloadURL);
+
+            // Get the token from localStorage
+            const storedUser = localStorage.getItem('user');
+            if (!storedUser) {
+              console.error('Authentication required');
+              setNotification({ type: 'error', message: 'Authentication required. Please log in again.' });
+              setIsUploading(false);
+              return;
+            }
+
+            const userData = JSON.parse(storedUser);
+            const token = userData.token;
+            const userId = userData.id || null;
+
+            if (!token) {
+              console.error('Authentication token not found');
+              setNotification({ type: 'error', message: 'Authentication token not found. Please log in again.' });
+              setIsUploading(false);
+              return;
+            }
+
+            // Send voucher data to the server
+            const response = await fetch('http://localhost:3001/api/vouchers', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                url_data: {
+                  downloadURL: downloadURL,
+                  fileName: uploadFile.name,
+                  filePath: filePath,
+                  contentType: uploadFile.type,
+                  size: uploadFile.size,
+                  uploadTime: new Date().toISOString()
+                },
+                deo_id: userId,
+                status: 'pending'
+              })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+              console.log('[VOUCHER] Metadata saved to database successfully:', result);
+              setNotification({
+                type: 'success',
+                message: 'Voucher PDF uploaded and sent to Verification Officer successfully!'
+              });
+
+              // Close the modal after a short delay
+              setTimeout(() => {
+                setShowUploadModal(false);
+                setUploadFile(null);
+                const fileInput = document.getElementById('voucherPdf') as HTMLInputElement;
+                if (fileInput) {
+                  fileInput.value = '';
+                }
+              }, 2000);
+            } else {
+              console.warn('[VOUCHER] Failed to save metadata to database:', result);
+              setNotification({
+                type: 'warning',
+                message: 'Voucher PDF uploaded but failed to save metadata to database. Please contact administrator.'
+              });
+            }
+          } catch (err: any) {
+            console.error('[VOUCHER] Error completing upload process:', err);
+            setNotification({ type: 'error', message: `Error: ${err.message || 'Unknown error'}` });
+          } finally {
+            setIsUploading(false);
+          }
+        }
+      );
     } catch (err: any) {
-      console.error('Error sending voucher for verification:', err);
-      alert(`Failed to send voucher: ${err.message || 'Unknown error'}`);
+      console.error('[VOUCHER] Error starting upload:', err);
+      setNotification({ type: 'error', message: `Error starting upload: ${err.message}` });
+      setIsUploading(false);
     }
   };
 
@@ -512,6 +659,25 @@ export default function GenerateVoucherPage() {
 
             {/* Styles for VoucherTemplate's own layout and controls */}
             <style jsx>{`
+              /* Animation keyframes for modal */
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+
+              @keyframes modalSlideIn {
+                from { transform: translateY(-20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+
+              .animate-fadeIn {
+                animation: fadeIn 0.3s ease-out forwards;
+              }
+
+              .animate-modalSlideIn {
+                animation: modalSlideIn 0.3s ease-out forwards;
+              }
+
               .voucher-template-container {
                 background-color: #f0f0f0; /* Default background for the area holding the form */
                 padding: 20px;
@@ -680,6 +846,132 @@ export default function GenerateVoucherPage() {
           </div>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-xl w-11/12 max-w-[550px] max-h-[90vh] overflow-y-auto shadow-xl animate-modalSlideIn border border-gray-100">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50">
+              <h2 className="m-0 text-[#6c5ce7] text-xl font-bold">Upload Voucher PDF</h2>
+              <button
+                className="bg-none border-none text-2xl cursor-pointer text-gray-600 transition-colors duration-300 w-10 h-10 flex items-center justify-center rounded-full hover:text-red-600 hover:bg-gray-100"
+                disabled={isUploading}
+                onClick={() => {
+                  if (!isUploading) {
+                    setShowUploadModal(false);
+                    setUploadFile(null);
+                    setNotification({type: null, message: ''});
+                  }
+                }}
+                style={{ opacity: isUploading ? 0.5 : 1, cursor: isUploading ? 'not-allowed' : 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-8">
+              {notification.type && (
+                <div className={`flex items-center p-4 mb-6 rounded-lg border relative ${
+                  notification.type === 'success'
+                    ? 'bg-green-50 text-green-800 border-green-200'
+                    : notification.type === 'warning'
+                      ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                      : 'bg-red-50 text-red-800 border-red-200'
+                }`}>
+                  <span className="mr-3 flex-shrink-0">
+                    {notification.type === 'success'
+                      ? '✅'
+                      : notification.type === 'warning'
+                        ? '⚠️'
+                        : '❌'}
+                  </span>
+                  <span className="flex-grow">{notification.message}</span>
+                  <button
+                    className="absolute right-2 top-2 text-gray-500 hover:text-gray-700 text-xl font-bold cursor-pointer"
+                    onClick={() => setNotification({type: null, message: ''})}
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              <form onSubmit={handleUploadSubmit}>
+                <div className="mb-7">
+                  <label htmlFor="voucherPdf" className="block mb-3 font-semibold text-gray-700 text-sm">PDF File*</label>
+                  <div className="relative flex flex-col w-full">
+                    <input
+                      type="file"
+                      id="voucherPdf"
+                      accept=".pdf"
+                      onChange={handleFileChange}
+                      required
+                      className={`py-3 px-4 bg-gray-50 border border-dashed border-gray-400 rounded-lg cursor-pointer transition-all duration-300 hover:bg-gray-100 hover:border-[#6c5ce7] ${uploadFile ? 'text-transparent pb-10' : ''}`}
+                    />
+                    {uploadFile && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-blue-100 py-2 px-3 rounded-b-lg flex justify-between items-center border-t border-blue-300">
+                        <span className="text-sm text-blue-700 truncate max-w-[80%]">{uploadFile.name}</span>
+                        <button
+                          type="button"
+                          className="bg-red-500 text-white border-none rounded-full w-5 h-5 flex items-center justify-center cursor-pointer text-sm leading-none hover:bg-red-600"
+                          onClick={() => {
+                            setUploadFile(null);
+                            const fileInput = document.getElementById('voucherPdf') as HTMLInputElement;
+                            if (fileInput) {
+                              fileInput.value = '';
+                            }
+                            if (notification.type === 'error' && notification.message.includes('size')) {
+                              setNotification({ type: null, message: '' });
+                            }
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-3 text-xs text-gray-600 flex items-center gap-1">Only PDF files are allowed (max 10MB)</p>
+                </div>
+
+                {isUploading && (
+                  <div className="mt-4 mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Upload Progress: {uploadProgress.toFixed(0)}%
+                    </label>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div
+                        className="bg-[#6c5ce7] h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between gap-4 mt-8">
+                  <button
+                    type="submit"
+                    className="bg-[#6c5ce7] text-white border-none py-3 px-7 rounded-lg font-semibold cursor-pointer transition-all duration-300 flex-1 hover:bg-[#5a4ecc] shadow-md"
+                    disabled={!uploadFile || isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Upload & Send to Verification'}
+                  </button>
+                  <button
+                    type="button"
+                    className="bg-gray-100 text-gray-700 border border-gray-300 py-3 px-7 rounded-lg font-semibold cursor-pointer transition-all duration-300 flex-1 hover:bg-gray-200"
+                    disabled={isUploading}
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setUploadFile(null);
+                      setNotification({type: null, message: ''});
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

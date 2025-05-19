@@ -3,6 +3,7 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { auth, dataEntryOfficer, verificationOfficer } = require('../middleware/auth');
 const sanitizer = require('perfect-express-sanitizer');
+const { voucherSchema } = require('../schemas/voucher');
 
 // Helper function to sanitize input
 const sanitizeInput = (input) => {
@@ -20,20 +21,31 @@ const sanitizeInput = (input) => {
 // @access  Private (DEO only)
 router.post('/', auth, dataEntryOfficer, async (req, res) => {
   try {
-    const { file_path } = req.body;
-
-    if (!file_path) {
+    // Validate request body
+    const validationResult = voucherSchema.safeParse(req.body);
+    if (!validationResult.success) {
       return res.status(400).json({
         success: false,
-        message: 'File path is required'
+        message: 'Validation error',
+        errors: validationResult.error.errors
+      });
+    }
+
+    const { url_data, status, comment } = validationResult.data;
+
+    // Ensure url_data is provided
+    if (!url_data || !url_data.downloadURL) {
+      return res.status(400).json({
+        success: false,
+        message: 'URL data with downloadURL is required'
       });
     }
 
     // Get active VO
     const [activeVO] = await pool.query(
-      `SELECT u.id 
-       FROM users u 
-       JOIN vo_details v ON u.id = v.user_id 
+      `SELECT u.id
+       FROM users u
+       JOIN vo_details v ON u.id = v.user_id
        WHERE u.role = 'vo' AND v.is_active = 'yes'`
     );
 
@@ -46,15 +58,30 @@ router.post('/', auth, dataEntryOfficer, async (req, res) => {
 
     const vo_id = activeVO[0].id;
 
-    // Insert voucher with default status 'pending'
+    // Prepare URL data for storage
+    let urlDataJson = url_data;
+    if (typeof url_data === 'string') {
+      try {
+        urlDataJson = JSON.parse(url_data);
+      } catch (e) {
+        urlDataJson = { downloadURL: url_data };
+      }
+    }
+
+    // Log the URL data for debugging
+    console.log('Received Firebase URL data for voucher:', urlDataJson);
+
+    // Insert voucher with the JSON URL data
     const [result] = await pool.query(
       `INSERT INTO vouchers
-      (file_path, deo_id, vo_id, status)
-      VALUES (?, ?, ?, 'pending')`,
+      (url_data, deo_id, vo_id, status, comment)
+      VALUES (?, ?, ?, ?, ?)`,
       [
-        sanitizeInput(file_path),
+        JSON.stringify(urlDataJson),
         req.user.id,
-        vo_id
+        vo_id,
+        status || 'pending',
+        comment || null
       ]
     );
 
@@ -84,8 +111,8 @@ router.post('/', auth, dataEntryOfficer, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     let query = `
-      SELECT v.*, 
-             u_deo.username as deo_username, 
+      SELECT v.*,
+             u_deo.username as deo_username,
              u_vo.username as vo_username,
              deo.full_name as deo_full_name,
              vo.full_name as vo_full_name
@@ -95,21 +122,34 @@ router.get('/', auth, async (req, res) => {
       LEFT JOIN deo_details deo ON u_deo.id = deo.user_id
       LEFT JOIN vo_details vo ON u_vo.id = vo.user_id
     `;
-    
+
     // Filter by role
     if (req.user.role === 'deo') {
       query += ` WHERE v.deo_id = ${req.user.id}`;
     } else if (req.user.role === 'vo') {
       query += ` WHERE v.vo_id = ${req.user.id}`;
     }
-    
+
     query += ' ORDER BY v.created_at DESC';
-    
+
     const [vouchers] = await pool.query(query);
+
+    // Parse URL data for each voucher
+    const processedVouchers = vouchers.map(voucher => {
+      if (voucher.url_data && typeof voucher.url_data === 'string') {
+        try {
+          voucher.url_data = JSON.parse(voucher.url_data);
+        } catch (e) {
+          console.error('Error parsing URL data for voucher ID:', voucher.id, e);
+          // If parsing fails, keep it as is
+        }
+      }
+      return voucher;
+    });
 
     res.json({
       success: true,
-      data: vouchers
+      data: processedVouchers
     });
   } catch (err) {
     console.error('Error getting vouchers:', err.message);
@@ -126,10 +166,10 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const [vouchers] = await pool.query(
-      `SELECT v.*, 
-              u_deo.username as deo_username, 
+      `SELECT v.*,
+              u_deo.username as deo_username,
               u_vo.username as vo_username,
               deo.full_name as deo_full_name,
               vo.full_name as vo_full_name
@@ -162,6 +202,16 @@ router.get('/:id', auth, async (req, res) => {
         success: false,
         message: 'Access denied'
       });
+    }
+
+    // Parse URL data if it's stored as a string
+    if (vouchers[0].url_data && typeof vouchers[0].url_data === 'string') {
+      try {
+        vouchers[0].url_data = JSON.parse(vouchers[0].url_data);
+      } catch (e) {
+        console.error('Error parsing URL data:', e);
+        // If parsing fails, keep it as is
+      }
     }
 
     res.json({
@@ -205,6 +255,17 @@ router.put('/:id/verify', auth, verificationOfficer, async (req, res) => {
       });
     }
 
+    // Parse URL data if it's stored as a string
+    let voucherData = vouchers[0];
+    if (voucherData.url_data && typeof voucherData.url_data === 'string') {
+      try {
+        voucherData.url_data = JSON.parse(voucherData.url_data);
+      } catch (e) {
+        console.error('Error parsing URL data:', e);
+        // If parsing fails, keep it as is
+      }
+    }
+
     // Update voucher status
     await pool.query(
       'UPDATE vouchers SET status = ?, comment = ? WHERE id = ?',
@@ -216,6 +277,16 @@ router.put('/:id/verify', auth, verificationOfficer, async (req, res) => {
       'SELECT * FROM vouchers WHERE id = ?',
       [id]
     );
+
+    // Parse URL data for the updated voucher
+    if (updatedVoucher[0].url_data && typeof updatedVoucher[0].url_data === 'string') {
+      try {
+        updatedVoucher[0].url_data = JSON.parse(updatedVoucher[0].url_data);
+      } catch (e) {
+        console.error('Error parsing URL data for updated voucher:', e);
+        // If parsing fails, keep it as is
+      }
+    }
 
     res.json({
       success: true,

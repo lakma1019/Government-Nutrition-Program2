@@ -24,6 +24,30 @@ export default function GenerateVoucherPage() {
     message: string;
   }>({ type: null, message: '' });
 
+  // Add state for year and month filters
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  // Generate years for dropdown (from 2020 to 2050)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 31 }, (_, i) => (2020 + i).toString());
+
+  // Months for dropdown
+  const months = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
+
   // State variables for PDF preview
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -587,6 +611,12 @@ export default function GenerateVoucherPage() {
     setShowPreviewModal(false);
   };
 
+  // Function to reset filters
+  const resetFilters = () => {
+    setSelectedYear('');
+    setSelectedMonth('');
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen text-2xl text-[#6c5ce7] bg-[#f8e6f3]">
@@ -644,6 +674,75 @@ export default function GenerateVoucherPage() {
         <div className={mainPanelClasses}>
           {/* Voucher Template Content - Embedded directly */}
           <div className="voucher-template-container">
+            {/* Filter Controls */}
+            <div className="flex items-center justify-between mb-4 print:hidden">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Year Filter */}
+                <div className="flex items-center">
+                  <label htmlFor="year-filter" className="mr-2 text-sm font-medium text-gray-700">Year:</label>
+                  <select
+                    id="year-filter"
+                    value={selectedYear}
+                    onChange={(e) => {
+                      setSelectedYear(e.target.value);
+                      // Reset month when year changes to prevent invalid combinations
+                      setSelectedMonth('');
+                    }}
+                    className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  >
+                    <option value="">All Years</option>
+                    {years.map(year => (
+                      <option
+                        key={year}
+                        value={year}
+                        disabled={parseInt(year) > currentYear} // Disable future years
+                      >
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Month Filter */}
+                <div className="flex items-center">
+                  <label htmlFor="month-filter" className="mr-2 text-sm font-medium text-gray-700">Month:</label>
+                  <select
+                    id="month-filter"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    disabled={!selectedYear} // Disable if no year is selected
+                  >
+                    <option value="">All Months</option>
+                    {months.map(month => {
+                      // Disable future months for the current year
+                      const isDisabled =
+                        selectedYear === currentYear.toString() &&
+                        parseInt(month.value) > new Date().getMonth() + 1;
+
+                      return (
+                        <option
+                          key={month.value}
+                          value={month.value}
+                          disabled={isDisabled}
+                        >
+                          {month.label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Reset Filters Button */}
+                <button
+                  onClick={resetFilters}
+                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+
             <div className="voucher-controls">
               <div className="action-buttons">
                 <button
@@ -677,7 +776,7 @@ export default function GenerateVoucherPage() {
             {/* Voucher content with ref for PDF generation - both forms shown at once */}
             <div ref={voucherContentRef} className="scrollable-forms-container">
               <div className="voucher-page page1">
-                <FormNew1 />
+                <FormNew1 selectedYear={selectedYear} selectedMonth={selectedMonth} />
               </div>
               <div className="voucher-page page2">
                 <FormNew2 />

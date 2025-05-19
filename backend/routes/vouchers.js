@@ -106,10 +106,12 @@ router.post('/', auth, dataEntryOfficer, async (req, res) => {
 });
 
 // @route   GET /api/vouchers
-// @desc    Get all vouchers
+// @desc    Get all vouchers with optional year and month filtering
 // @access  Private (DEO and VO)
 router.get('/', auth, async (req, res) => {
   try {
+    const { year, month } = req.query;
+
     let query = `
       SELECT v.*,
              u_deo.username as deo_username,
@@ -123,16 +125,41 @@ router.get('/', auth, async (req, res) => {
       LEFT JOIN vo_details vo ON u_vo.id = vo.user_id
     `;
 
+    // Start building WHERE clause
+    let whereConditions = [];
+    let params = [];
+
     // Filter by role
     if (req.user.role === 'deo') {
-      query += ` WHERE v.deo_id = ${req.user.id}`;
+      whereConditions.push(`v.deo_id = ?`);
+      params.push(req.user.id);
     } else if (req.user.role === 'vo') {
-      query += ` WHERE v.vo_id = ${req.user.id}`;
+      whereConditions.push(`v.vo_id = ?`);
+      params.push(req.user.id);
     }
 
+    // Add year and month filters if provided
+    if (year && month) {
+      whereConditions.push(`YEAR(v.created_at) = ? AND MONTH(v.created_at) = ?`);
+      params.push(year, month);
+    } else if (year) {
+      whereConditions.push(`YEAR(v.created_at) = ?`);
+      params.push(year);
+    } else if (month) {
+      whereConditions.push(`MONTH(v.created_at) = ?`);
+      params.push(month);
+    }
+
+    // Add WHERE clause if there are conditions
+    if (whereConditions.length > 0) {
+      query += ` WHERE ${whereConditions.join(' AND ')}`;
+    }
+
+    // Add ORDER BY clause
     query += ' ORDER BY v.created_at DESC';
 
-    const [vouchers] = await pool.query(query);
+    // Execute the query with parameters
+    const [vouchers] = await pool.query(query, params);
 
     // Parse URL data for each voucher
     const processedVouchers = vouchers.map(voucher => {

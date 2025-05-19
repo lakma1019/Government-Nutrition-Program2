@@ -39,6 +39,30 @@ export default function VoucherHistoryPage() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Add state for year and month filters
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  // Generate years for dropdown (from 2020 to 2050)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 31 }, (_, i) => (2020 + i).toString());
+
+  // Months for dropdown
+  const months = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -83,7 +107,7 @@ export default function VoucherHistoryPage() {
   };
 
   // Fetch vouchers data
-  const fetchVouchers = useCallback(async () => {
+  const fetchVouchers = useCallback(async (year?: string, month?: string) => {
     if (!token) {
       showNotification('error', 'Authentication required. Please log in.');
       return;
@@ -94,7 +118,24 @@ export default function VoucherHistoryPage() {
       setVouchers([]);
       setFilteredVouchers([]);
 
-      const response = await fetch(API_ENDPOINTS.VOUCHERS.BASE, {
+      // Build URL with query parameters for year and month filters
+      let url = API_ENDPOINTS.VOUCHERS.BASE;
+      const params = new URLSearchParams();
+
+      if (year) {
+        params.append('year', year);
+      }
+
+      if (month) {
+        params.append('month', month);
+      }
+
+      // Append query parameters if any exist
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -131,12 +172,28 @@ export default function VoucherHistoryPage() {
     }
   }, [token, itemsPerPage]);
 
+  // Function to reset filters
+  const resetFilters = () => {
+    setSelectedYear('');
+    setSelectedMonth('');
+    if (token) {
+      fetchVouchers();
+    }
+  };
+
   // Fetch data on component mount
   useEffect(() => {
     if (token) {
       fetchVouchers();
     }
   }, [fetchVouchers, token]);
+
+  // Fetch data when filters change
+  useEffect(() => {
+    if (token) {
+      fetchVouchers(selectedYear, selectedMonth);
+    }
+  }, [selectedYear, selectedMonth, token]);
 
   // Filter vouchers based on search query
   useEffect(() => {
@@ -277,6 +334,72 @@ export default function VoucherHistoryPage() {
         </div>
 
         <div className={controlsSectionClasses}>
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            {/* Year Filter */}
+            <div className="flex items-center">
+              <label htmlFor="year-filter" className="mr-2 text-sm font-medium text-gray-700">Year:</label>
+              <select
+                id="year-filter"
+                value={selectedYear}
+                onChange={(e) => {
+                  setSelectedYear(e.target.value);
+                  // Reset month when year changes to prevent invalid combinations
+                  setSelectedMonth('');
+                }}
+                className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              >
+                <option value="">All Years</option>
+                {years.map(year => (
+                  <option
+                    key={year}
+                    value={year}
+                    disabled={parseInt(year) > currentYear} // Disable future years
+                  >
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Month Filter */}
+            <div className="flex items-center">
+              <label htmlFor="month-filter" className="mr-2 text-sm font-medium text-gray-700">Month:</label>
+              <select
+                id="month-filter"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                disabled={!selectedYear} // Disable if no year is selected
+              >
+                <option value="">All Months</option>
+                {months.map(month => {
+                  // Disable future months for the current year
+                  const isDisabled =
+                    selectedYear === currentYear.toString() &&
+                    parseInt(month.value) > new Date().getMonth() + 1;
+
+                  return (
+                    <option
+                      key={month.value}
+                      value={month.value}
+                      disabled={isDisabled}
+                    >
+                      {month.label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Reset Filters Button */}
+            <button
+              onClick={resetFilters}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Clear Filters
+            </button>
+          </div>
+
           <div className={searchContainerClasses}>
             <input
               type="text"

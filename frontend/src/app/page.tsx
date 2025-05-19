@@ -163,25 +163,6 @@ export default function HomePage() {
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
-                  <div className="p-6">
-                    <h3 className="font-semibold text-green-700 text-lg mb-2">Program Title {i}</h3>
-                    <p className="text-green-600 mb-4">Supporting healthier communities</p>
-                    <Link
-                      href={`/programs/${i}`}
-                      className="text-green-700 font-medium hover:text-green-800 inline-flex items-center"
-                    >
-                      Learn more
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </div>
                 </div>
               ))}
             </div>
@@ -216,13 +197,6 @@ export default function HomePage() {
                           className="object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent"></div>
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <span className="inline-block bg-green-700 text-white text-xs px-2 py-1 rounded-md mb-2">
-                            Notice #{i - 9}
-                          </span>
-                          <p className="text-white text-sm font-medium">Gazette Update Title {i - 9}</p>
-                          <p className="text-green-100 text-xs mt-1">Published: May 10, 2025</p>
-                        </div>
                       </div>
                     </Link>
                   </div>
@@ -243,13 +217,6 @@ export default function HomePage() {
                           className="object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent"></div>
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <span className="inline-block bg-green-700 text-white text-xs px-2 py-1 rounded-md mb-2">
-                            Notice #{i - 9}
-                          </span>
-                          <p className="text-white text-sm font-medium">Gazette Update Title {i - 9}</p>
-                          <p className="text-green-100 text-xs mt-1">Published: May 10, 2025</p>
-                        </div>
                       </div>
                     </Link>
                   </div>
@@ -275,13 +242,6 @@ export default function HomePage() {
                           className="object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent"></div>
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <span className="inline-block bg-green-700 text-white text-xs px-2 py-1 rounded-md mb-2">
-                            Notice #{i - 9}
-                          </span>
-                          <p className="text-white text-sm font-medium">Gazette Update Title {i - 9}</p>
-                          <p className="text-green-100 text-xs mt-1">Published: May 10, 2025</p>
-                        </div>
                       </div>
                     </Link>
                   </div>
@@ -302,13 +262,6 @@ export default function HomePage() {
                           className="object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-green-900/80 to-transparent"></div>
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <span className="inline-block bg-green-700 text-white text-xs px-2 py-1 rounded-md mb-2">
-                            Notice #{i - 9}
-                          </span>
-                          <p className="text-white text-sm font-medium">Gazette Update Title {i - 9}</p>
-                          <p className="text-green-100 text-xs mt-1">Published: May 10, 2025</p>
-                        </div>
                       </div>
                     </Link>
                   </div>
@@ -346,31 +299,6 @@ export default function HomePage() {
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-green-900/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="font-semibold text-green-700 text-lg mb-2">Initiative {i - 4}</h3>
-                    <p className="text-green-600 mb-4">
-                      {i === 5 && "Fresh produce access program for underserved communities"}
-                      {i === 6 && "Nutritional education for families and schools"}
-                      {i === 7 && "Sustainable food systems and local farming support"}
-                      {i === 8 && "Senior nutrition program and meal delivery services"}
-                      {i === 9 && "Community gardens initiative and urban farming"}
-                    </p>
-                    <Link
-                      href={`/initiatives/${i - 4}`}
-                      className="text-green-700 font-medium hover:text-green-800 inline-flex items-center"
-                    >
-                      Learn more
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
                   </div>
                 </div>
               ))}

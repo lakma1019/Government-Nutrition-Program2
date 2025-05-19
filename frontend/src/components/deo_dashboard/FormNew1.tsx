@@ -54,7 +54,13 @@ const numberToSinhalaWords = (num: number): string => {
   return convertLessThan10000000(num);
 };
 
-const FormNew1: React.FC = () => {
+// Define props interface for FormNew1
+interface FormNew1Props {
+  selectedYear?: string;
+  selectedMonth?: string;
+}
+
+const FormNew1: React.FC<FormNew1Props> = ({ selectedYear, selectedMonth }) => {
   // State for auto-filled fields
   const [debitParticulars, setDebitParticulars] = useState('');
   const [payableTo, setPayableTo] = useState('');
@@ -90,7 +96,24 @@ const FormNew1: React.FC = () => {
   // Function to fetch total amount from progress report data
   const fetchTotalAmount = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/daily-data');
+      // Build URL with query parameters for year and month filters
+      let url = 'http://localhost:3001/api/daily-data';
+      const params = new URLSearchParams();
+
+      if (selectedYear) {
+        params.append('year', selectedYear);
+      }
+
+      if (selectedMonth) {
+        params.append('month', selectedMonth);
+      }
+
+      // Append query parameters if any exist
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch data: ${response.status}`);
@@ -240,14 +263,17 @@ const FormNew1: React.FC = () => {
     // Set current date
     setCurrentDate(formatCurrentDate());
 
-    // Fetch total amount from progress report
-    fetchTotalAmount();
-
     // Fetch data for other fields
     fetchActiveContractor();
     fetchActiveDEO();
     fetchActiveVO();
   }, []);
+
+  // Fetch total amount when year or month filters change
+  useEffect(() => {
+    // Fetch total amount from progress report
+    fetchTotalAmount();
+  }, [selectedYear, selectedMonth]);
   return (
     <>
       <div className="form-container">

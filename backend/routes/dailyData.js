@@ -5,14 +5,35 @@ const { auth, dataEntryOfficer } = require('../middleware/auth');
 const { dailyDataSchema } = require('../schemas/dailyData');
 
 // @route   GET /api/daily-data
-// @desc    Get all daily data entries
+// @desc    Get all daily data entries with optional year and month filtering
 // @access  Public (for progress report)
 router.get('/', async (req, res) => {
   try {
-    // Get all daily data entries sorted by date (oldest to newest)
-    const [dailyData] = await pool.query(
-      'SELECT * FROM daily_data ORDER BY date ASC'
-    );
+    const { year, month } = req.query;
+
+    let query = 'SELECT * FROM daily_data';
+    let params = [];
+
+    // Add WHERE clause for year and month filtering if provided
+    if (year && month) {
+      // Filter by both year and month
+      query += ' WHERE YEAR(date) = ? AND MONTH(date) = ?';
+      params = [year, month];
+    } else if (year) {
+      // Filter by year only
+      query += ' WHERE YEAR(date) = ?';
+      params = [year];
+    } else if (month) {
+      // Filter by month only
+      query += ' WHERE MONTH(date) = ?';
+      params = [month];
+    }
+
+    // Add ORDER BY clause
+    query += ' ORDER BY date ASC';
+
+    // Execute the query with parameters
+    const [dailyData] = await pool.query(query, params);
 
     res.json({
       success: true,

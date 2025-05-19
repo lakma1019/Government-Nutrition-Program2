@@ -413,7 +413,7 @@ export default function DailyDataManagement() {
       <nav className={navbarClasses}>
         <div className={brandClasses}>Government Nutrition Program</div>
         <div className={navLinksClasses}>
-          <Link href="/DEO_login" className={`${navLinkBaseClasses} ${pathname === "/DEO_login" ? linkTextHighlightClasses : ""}`}>
+          <Link href="/deo_dashboard" className={`${navLinkBaseClasses} ${pathname === "/deo_dashboard" ? linkTextHighlightClasses : ""}`}>
             <span className={linkTextBaseClasses}>Dashboard</span>
           </Link>
           <Link href="/" className={navLinkBaseClasses}>

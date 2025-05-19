@@ -87,10 +87,9 @@ export default function AddUsersComponent() {
   const sanitizeInput = (input: string): string => {
     // Basic client-side sanitization
     return input
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/</g, '<')
+      .replace(/>/g, '>')
+      .replace(/"/g, '"')
   };
 
   // Handle form submission
@@ -145,6 +144,7 @@ export default function AddUsersComponent() {
           setActiveUserInfo(data.activeUser);
           setPendingFormData(userData);
           setShowActiveUserConfirm(true);
+          // setLoading(false); // loading will be set to false in finally block
           return;
         }
 
@@ -159,106 +159,93 @@ export default function AddUsersComponent() {
         }
 
         console.error('Error response:', data);
+        // setLoading(false); // loading will be set to false in finally block
         return;
       }
-        // Check if this is a DEO or VO user that requires additional details
-        if (data.requiresAdditionalDetails && data.user && data.user.id) {
-          // Log user data for debugging
-          console.log('User created successfully:', data.user);
-          console.log('User ID for redirection:', data.user.id);
+      
+      // If code reaches here, response.ok IS TRUE.
+      // Check if this is a DEO or VO user that requires additional details
+      if (data.requiresAdditionalDetails && data.user && data.user.id) {
+        // Log user data for debugging
+        console.log('User created successfully:', data.user);
+        console.log('User ID for redirection:', data.user.id);
 
-          // Store the authentication token in localStorage
-          if (data.token) {
-            console.log('Storing authentication token in localStorage');
-            localStorage.setItem('token', data.token);
+        // Store the authentication token in localStorage
+        if (data.token) {
+          console.log('Storing authentication token in localStorage');
+          localStorage.setItem('token', data.token);
+        } else {
+          console.warn('No token received from server');
+        }
+
+        // Store user ID and role for manual redirection if needed
+        setCreatedUserId(data.user.id);
+        setCreatedUserRole(data.user.role);
+
+        // Show a temporary success message
+        setSuccess(true);
+        setError(null);
+
+        // Show manual redirect button after 3 seconds if automatic redirection fails
+        setTimeout(() => {
+          setShowManualRedirect(true);
+        }, 3000);
+
+        // Redirect to the appropriate details page based on role after a short delay
+        setTimeout(() => {
+          console.log('User role for redirection check:', data.user.role);
+
+          if (data.user.role === 'dataEntryOfficer' || data.user.role === 'deo') {
+            console.log('Redirecting to DEO details page with userId:', data.user.id);
+            try {
+              router.push(`/admin_dashboard/add_users/deo_details?userId=${data.user.id}`);
+              setTimeout(() => {
+                // Check if redirection has occurred by comparing current path
+                if (typeof window !== 'undefined' && (window.location.pathname !== `/admin_dashboard/add_users/deo_details` || !window.location.search.includes(`userId=${data.user.id}`))) { 
+                    console.log('Fallback: Using window.location for DEO details redirection');
+                    window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
+                }
+              }, 2000);
+            } catch (error) {
+              console.error('Router navigation error:', error);
+              if (typeof window !== 'undefined') window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
+            }
+          } else if (data.user.role === 'verificationOfficer' || data.user.role === 'vo') {
+            console.log('Redirecting to VO details page with userId:', data.user.id);
+            try {
+              router.push(`/admin_dashboard/add_users/vo_details?userId=${data.user.id}`);
+              setTimeout(() => {
+                 // Check if redirection has occurred
+                if (typeof window !== 'undefined' && (window.location.pathname !== `/admin_dashboard/add_users/vo_details` || !window.location.search.includes(`userId=${data.user.id}`))) { 
+                    console.log('Fallback: Using window.location for VO details redirection');
+                    window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
+                }
+              }, 2000);
+            } catch (error) {
+              console.error('Router navigation error:', error);
+              if (typeof window !== 'undefined') window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
+            }
           } else {
-            console.warn('No token received from server');
-          }
-
-          // Store user ID and role for manual redirection if needed
-          setCreatedUserId(data.user.id);
-          setCreatedUserRole(data.user.role);
-
-          // Show a temporary success message
-          setSuccess(true);
-          setError(null);
-
-          // Show manual redirect button after 3 seconds if automatic redirection fails
-          setTimeout(() => {
-            setShowManualRedirect(true);
-          }, 3000);
-
-          // Redirect to the appropriate details page based on role after a short delay
-          // This gives time for the success message to be seen and ensures the user creation is fully processed
-          setTimeout(() => {
-            // Add more debugging to see the exact role value
-            console.log('User role for redirection check:', data.user.role);
-
-            if (data.user.role === 'dataEntryOfficer' || data.user.role === 'deo') {
-              // Use Next.js router for navigation
-              console.log('Redirecting to DEO details page with userId:', data.user.id);
-              try {
-                router.push(`/admin_dashboard/add_users/deo_details?userId=${data.user.id}`);
-
-                // Set a fallback in case router.push doesn't trigger navigation
-                setTimeout(() => {
-                  console.log('Fallback: Using window.location for DEO details redirection');
-                  window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
-                }, 2000);
-              } catch (error) {
-                console.error('Router navigation error:', error);
-                window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
-              }
-            } else if (data.user.role === 'verificationOfficer' || data.user.role === 'vo') {
-              // Use Next.js router for navigation
-              console.log('Redirecting to VO details page with userId:', data.user.id);
-              try {
-                router.push(`/admin_dashboard/add_users/vo_details?userId=${data.user.id}`);
-
-                // Set a fallback in case router.push doesn't trigger navigation
-                setTimeout(() => {
-                  console.log('Fallback: Using window.location for VO details redirection');
-                  window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
-                }, 2000);
-              } catch (error) {
-                console.error('Router navigation error:', error);
-                window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
-              }
-            } else {
-              // If role doesn't match any expected value, log it and try direct navigation
-              console.error('Unexpected role value:', data.user.role);
-              if (formData.role === 'deo') {
+            console.error('Unexpected role value:', data.user.role);
+            if (typeof window !== 'undefined') {
+              if (formData.role === 'deo') { // Fallback based on form data if server role is unexpected
                 window.location.href = `/admin_dashboard/add_users/deo_details?userId=${data.user.id}`;
               } else if (formData.role === 'vo') {
                 window.location.href = `/admin_dashboard/add_users/vo_details?userId=${data.user.id}`;
               }
             }
-          }, 1000); // 1 second delay
-        } else {
-          // For admin users, just show success and reset form
-          setSuccess(true);
-          // Reset form
-          setFormData({
-            username: '',
-            password: '',
-            confirmPassword: '',
-            role: 'admin',
-            isActive: 'yes'
-          });
-        }
+          }
+        }, 1000);
       } else {
-        // Handle validation errors from backend
-        if (data.errors && Array.isArray(data.errors)) {
-          // Format validation errors for display
-          const errorMessage = data.errors.map((err: any) =>
-            `${err.path.join('.')}: ${err.message}`
-          ).join(', ');
-          setError(errorMessage || data.message || 'Failed to add user');
-        } else {
-          setError(data.message || 'Failed to add user');
-        }
-
-        console.error('Error response:', data);
+        // For admin users, just show success and reset form
+        setSuccess(true);
+        setFormData({
+          username: '',
+          password: '',
+          confirmPassword: '',
+          role: 'admin',
+          isActive: 'yes'
+        });
       }
     } catch (err) {
       console.error('Error adding user:', err);
@@ -275,7 +262,7 @@ export default function AddUsersComponent() {
 
   // Function to handle manual redirection
   const handleManualRedirect = () => {
-    if (createdUserId) {
+    if (createdUserId && typeof window !== 'undefined') {
       if (createdUserRole === 'dataEntryOfficer' || createdUserRole === 'deo') {
         window.location.href = `/admin_dashboard/add_users/deo_details?userId=${createdUserId}`;
       } else if (createdUserRole === 'verificationOfficer' || createdUserRole === 'vo') {
@@ -292,9 +279,13 @@ export default function AddUsersComponent() {
       return;
     }
 
+    setLoading(true); // Indicate loading for this operation
+    setError(null);
+    setSuccess(false);
+
     try {
       // Get auth token
-      const authToken = localStorage.getItem('token');
+      const authToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       if (!authToken) {
         setError('Authentication required. Please log in again.');
         setShowActiveUserConfirm(false);
@@ -332,29 +323,29 @@ export default function AddUsersComponent() {
       const submitData = await submitResponse.json();
 
       if (!submitResponse.ok) {
-        throw new Error(`Failed to add user: ${submitData.message || 'Unknown error'}`);
+        // If the second submission also fails (e.g. validation), show errors
+         if (submitData.errors && Array.isArray(submitData.errors)) {
+          const errorMessage = submitData.errors.map((err: any) =>
+            `${err.path.join('.')}: ${err.message}`
+          ).join(', ');
+          setError(errorMessage || submitData.message || 'Failed to add user after deactivation.');
+        } else {
+          setError(submitData.message || 'Failed to add user after deactivation.');
+        }
+        console.error('Error response after deactivation:', submitData);
+        return; // Stop further processing
       }
 
-      // Handle successful registration
+      // Handle successful registration after deactivation
       setSuccess(true);
 
-      // Check if this is a DEO or VO user that requires additional details
       if (submitData.requiresAdditionalDetails && submitData.user && submitData.user.id) {
-        // Store the authentication token in localStorage
-        if (submitData.token) {
+        if (submitData.token && typeof window !== 'undefined') {
           localStorage.setItem('token', submitData.token);
         }
-
-        // Store user ID and role for redirection
         setCreatedUserId(submitData.user.id);
         setCreatedUserRole(submitData.user.role);
-
-        // Show manual redirect button after 3 seconds
-        setTimeout(() => {
-          setShowManualRedirect(true);
-        }, 3000);
-
-        // Redirect to the appropriate details page
+        setTimeout(() => setShowManualRedirect(true), 3000);
         setTimeout(() => {
           if (submitData.user.role === 'dataEntryOfficer' || submitData.user.role === 'deo') {
             router.push(`/admin_dashboard/add_users/deo_details?userId=${submitData.user.id}`);
@@ -363,7 +354,6 @@ export default function AddUsersComponent() {
           }
         }, 1000);
       } else {
-        // For admin users, just reset form
         setFormData({
           username: '',
           password: '',
@@ -375,11 +365,12 @@ export default function AddUsersComponent() {
 
     } catch (err) {
       console.error('Error in deactivate/activate process:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred during deactivation/activation.');
     } finally {
       setShowActiveUserConfirm(false);
       setPendingFormData(null);
       setActiveUserInfo(null);
+      setLoading(false); // Ensure loading is set to false
     }
   };
 
@@ -416,9 +407,9 @@ export default function AddUsersComponent() {
       </div>
 
       {/* Success Message */}
-      {success && (
+      {success && !error && ( // Only show success if there's no error
         <div className={alertSuccessClasses}>
-          {formData.role === 'admin' ? (
+          {formData.role === 'admin' || !(createdUserRole === 'dataEntryOfficer' || createdUserRole === 'deo' || createdUserRole === 'verificationOfficer' || createdUserRole === 'vo') ? (
             <>User added successfully!</>
           ) : (
             <>
@@ -434,8 +425,9 @@ export default function AddUsersComponent() {
                     type="button"
                     onClick={handleManualRedirect}
                     className={manualRedirectButtonClasses}
+                    disabled={loading}
                   >
-                    Continue to Additional Details
+                    {loading ? 'Processing...' : 'Continue to Additional Details'}
                   </button>
 
                   {/* Direct link as a last resort */}
@@ -485,6 +477,7 @@ export default function AddUsersComponent() {
             onChange={handleInputChange}
             className={inputClasses}
             placeholder="Enter username"
+            disabled={loading}
           />
           {validationErrors.username && (
             <p className={errorClasses}>{validationErrors.username}</p>
@@ -504,6 +497,7 @@ export default function AddUsersComponent() {
             onChange={handleInputChange}
             className={inputClasses}
             placeholder="Enter password"
+            disabled={loading}
           />
           {validationErrors.password && (
             <p className={errorClasses}>{validationErrors.password}</p>
@@ -523,6 +517,7 @@ export default function AddUsersComponent() {
             onChange={handleInputChange}
             className={inputClasses}
             placeholder="Confirm password"
+            disabled={loading}
           />
           {validationErrors.confirmPassword && (
             <p className={errorClasses}>{validationErrors.confirmPassword}</p>
@@ -540,6 +535,7 @@ export default function AddUsersComponent() {
             value={formData.role}
             onChange={handleInputChange}
             className={inputClasses}
+            disabled={loading}
           >
             <option value="admin">Admin</option>
             <option value="deo">Data Entry Officer</option>
@@ -559,6 +555,7 @@ export default function AddUsersComponent() {
                 checked={formData.isActive === 'yes'}
                 onChange={handleRadioChange}
                 className={radioInputClasses}
+                disabled={loading}
               />
               <span>Active</span>
             </label>
@@ -570,6 +567,7 @@ export default function AddUsersComponent() {
                 checked={formData.isActive === 'no'}
                 onChange={handleRadioChange}
                 className={radioInputClasses}
+                disabled={loading}
               />
               <span>Inactive</span>
             </label>
@@ -579,10 +577,10 @@ export default function AddUsersComponent() {
         {/* Submit Button */}
         <button
           type="submit"
-          className={loading ? disabledButtonClasses : buttonClasses}
-          disabled={loading}
+          className={loading || csrfLoading ? disabledButtonClasses : buttonClasses}
+          disabled={loading || csrfLoading}
         >
-          {loading ? 'Adding User...' : 'Add User'}
+          {loading ? 'Adding User...' : csrfLoading ? 'Loading...' : 'Add User'}
         </button>
       </form>
 
@@ -598,10 +596,11 @@ export default function AddUsersComponent() {
             <div className="bg-gray-100 py-4 px-5 border-b border-gray-200 flex justify-between items-center">
               <h2 className="m-0 text-lg font-semibold text-gray-800">Active User Exists</h2>
               <button
-                onClick={() => setShowActiveUserConfirm(false)}
+                onClick={() => { setShowActiveUserConfirm(false); setActiveUserInfo(null); setPendingFormData(null); }}
                 className="bg-none border-none text-2xl cursor-pointer text-gray-600 hover:text-red-600"
+                disabled={loading}
               >
-                &times;
+                ×
               </button>
             </div>
             <div className="p-6 text-gray-700 text-sm">
@@ -613,16 +612,18 @@ export default function AddUsersComponent() {
               </p>
               <div className="flex justify-end gap-3 mt-4">
                 <button
-                  onClick={() => setShowActiveUserConfirm(false)}
+                  onClick={() => { setShowActiveUserConfirm(false); setActiveUserInfo(null); setPendingFormData(null); }}
                   className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-200"
+                  disabled={loading}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDeactivateActiveUser}
                   className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
+                  disabled={loading}
                 >
-                  Deactivate Current & Activate New
+                  {loading ? 'Processing...' : 'Deactivate Current & Activate New'}
                 </button>
               </div>
             </div>

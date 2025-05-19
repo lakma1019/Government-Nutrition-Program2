@@ -140,20 +140,6 @@ export default function HomePage() {
               <p className="text-green-600 text-lg md:text-xl max-w-2xl mx-auto mb-10">
                 Providing nutrition assistance, education, and resources to promote healthier lives for all citizens.
               </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Link
-                  href="/eligibility"
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-8 rounded-md transition-colors transform hover:scale-105 duration-200 shadow-md"
-                >
-                  Check Eligibility
-                </Link>
-                <Link
-                  href="/about"
-                  className="bg-white text-green-700 border border-green-600 hover:bg-green-50 font-medium py-3 px-8 rounded-md transition-colors shadow-sm"
-                >
-                  Learn More
-                </Link>
-              </div>
             </div>
           </section>
 
@@ -390,29 +376,6 @@ export default function HomePage() {
               ))}
             </div>
           </section>
-
-          {/* Call to Action */}
-          <section className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-10 text-white text-center shadow-lg transform transition-transform hover:scale-[1.01] duration-300">
-            <h2 className="text-2xl md:text-3xl font-bold mb-4">Join Our Program</h2>
-            <p className="mb-8 max-w-2xl mx-auto text-lg">
-              Learn more about our nutrition programs and how to qualify for assistance. Our team is ready to help you
-              access the resources you need.
-            </p>
-            <div className="flex flex-wrap justify-center gap-6">
-              <Link
-                href="/eligibility"
-                className="bg-white text-green-700 hover:bg-green-100 font-medium py-3 px-8 rounded-md transition-all shadow-md hover:shadow-lg"
-              >
-                Check Eligibility
-              </Link>
-              <Link
-                href="/contact"
-                className="bg-green-800 hover:bg-green-900 text-white font-medium py-3 px-8 rounded-md transition-all border border-green-200/30 shadow-md hover:shadow-lg"
-              >
-                Contact Us
-              </Link>
-            </div>
-          </section>
         </div>
       </main>
 
@@ -451,96 +414,6 @@ export default function HomePage() {
                   </svg>
                 </a>
               </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-6 border-b border-green-700 pb-2">Quick Links</h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/programs"
-                    className="text-green-200 hover:text-white transition-colors inline-flex items-center"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    Programs
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/resources"
-                    className="text-green-200 hover:text-white transition-colors inline-flex items-center"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    Resources
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/gazette"
-                    className="text-green-200 hover:text-white transition-colors inline-flex items-center"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    Gazette
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/contact"
-                    className="text-green-200 hover:text-white transition-colors inline-flex items-center"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/eligibility"
-                    className="text-green-200 hover:text-white transition-colors inline-flex items-center"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4 mr-2"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    Eligibility
-                  </Link>
-                </li>
-              </ul>
             </div>
             <div>
               <h3 className="text-lg font-semibold mb-6 border-b border-green-700 pb-2">Contact Us</h3>

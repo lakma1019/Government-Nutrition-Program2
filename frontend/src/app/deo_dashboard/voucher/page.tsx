@@ -24,6 +24,10 @@ export default function GenerateVoucherPage() {
     message: string;
   }>({ type: null, message: '' });
 
+  // State variables for PDF preview
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
   // State variables to store auto-populated field values from FormNew1
   const [debitParticulars, setDebitParticulars] = useState('');
   const [payableTo, setPayableTo] = useState('');
@@ -529,6 +533,9 @@ export default function GenerateVoucherPage() {
                 message: 'Voucher PDF uploaded and sent to Verification Officer successfully!'
               });
 
+              // Save the PDF URL for preview
+              setPdfUrl(downloadURL);
+
               // Close the modal after a short delay
               setTimeout(() => {
                 setShowUploadModal(false);
@@ -537,6 +544,9 @@ export default function GenerateVoucherPage() {
                 if (fileInput) {
                   fileInput.value = '';
                 }
+
+                // Show the preview modal
+                setShowPreviewModal(true);
               }, 2000);
             } else {
               console.warn('[VOUCHER] Failed to save metadata to database:', result);
@@ -563,6 +573,18 @@ export default function GenerateVoucherPage() {
   const handleRefresh = () => {
     setFormData(initializeFormData());
     console.log('Voucher data refreshed.');
+  };
+
+  // Function to handle PDF preview
+  const handlePreviewPdf = () => {
+    if (pdfUrl) {
+      setShowPreviewModal(true);
+    }
+  };
+
+  // Function to close the preview modal
+  const closePreviewModal = () => {
+    setShowPreviewModal(false);
   };
 
   if (loading) {
@@ -644,6 +666,11 @@ export default function GenerateVoucherPage() {
                 <button onClick={handleSendToVerify} className="send-verify-button">
                   Send to Verification
                 </button>
+                {pdfUrl && (
+                  <button onClick={handlePreviewPdf} className="view-pdf-button">
+                    View Uploaded PDF
+                  </button>
+                )}
               </div>
             </div>
 
@@ -754,7 +781,7 @@ export default function GenerateVoucherPage() {
                 gap: 10px;
               }
 
-              .preview-button, .send-verify-button {
+              .preview-button, .send-verify-button, .view-pdf-button {
                 padding: 8px 15px;
                 border: none;
                 border-radius: 4px;
@@ -763,7 +790,7 @@ export default function GenerateVoucherPage() {
                 color: white;
                 margin-right: 10px; /* Consider removing if gap is sufficient */
               }
-              .preview-button:last-child, .send-verify-button:last-child {
+              .preview-button:last-child, .send-verify-button:last-child, .view-pdf-button:last-child {
                   margin-right: 0;
               }
 
@@ -782,6 +809,14 @@ export default function GenerateVoucherPage() {
 
               .send-verify-button:hover {
                 background-color: #0b7dda;
+              }
+
+              .view-pdf-button {
+                background-color: #9c27b0; /* Purple */
+              }
+
+              .view-pdf-button:hover {
+                background-color: #7b1fa2;
               }
 
               .voucher-page {
@@ -847,6 +882,46 @@ export default function GenerateVoucherPage() {
         </div>
       </div>
 
+      {/* PDF Preview Modal */}
+      {showPreviewModal && pdfUrl && (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-xl w-11/12 max-w-[90%] h-[90vh] overflow-hidden shadow-xl animate-modalSlideIn border border-gray-100 flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
+              <h2 className="m-0 text-[#6c5ce7] text-xl font-bold">Voucher PDF Preview</h2>
+              <button
+                className="bg-none border-none text-2xl cursor-pointer text-gray-600 transition-colors duration-300 w-10 h-10 flex items-center justify-center rounded-full hover:text-red-600 hover:bg-gray-100"
+                onClick={closePreviewModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                className="w-full h-full border-none"
+                title="Voucher PDF Preview"
+              />
+            </div>
+            <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between">
+              <button
+                onClick={closePreviewModal}
+                className="py-2 px-4 bg-gray-200 text-gray-700 rounded-md font-medium hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2 px-4 bg-[#6c5ce7] text-white rounded-md font-medium hover:bg-[#5a4ecc] transition-colors"
+              >
+                Open in New Tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm animate-fadeIn">
@@ -870,27 +945,40 @@ export default function GenerateVoucherPage() {
             </div>
             <div className="p-8">
               {notification.type && (
-                <div className={`flex items-center p-4 mb-6 rounded-lg border relative ${
+                <div className={`flex flex-col p-4 mb-6 rounded-lg border relative ${
                   notification.type === 'success'
                     ? 'bg-green-50 text-green-800 border-green-200'
                     : notification.type === 'warning'
                       ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
                       : 'bg-red-50 text-red-800 border-red-200'
                 }`}>
-                  <span className="mr-3 flex-shrink-0">
-                    {notification.type === 'success'
-                      ? '✅'
-                      : notification.type === 'warning'
-                        ? '⚠️'
-                        : '❌'}
-                  </span>
-                  <span className="flex-grow">{notification.message}</span>
-                  <button
-                    className="absolute right-2 top-2 text-gray-500 hover:text-gray-700 text-xl font-bold cursor-pointer"
-                    onClick={() => setNotification({type: null, message: ''})}
-                  >
-                    ×
-                  </button>
+                  <div className="flex items-center">
+                    <span className="mr-3 flex-shrink-0">
+                      {notification.type === 'success'
+                        ? '✅'
+                        : notification.type === 'warning'
+                          ? '⚠️'
+                          : '❌'}
+                    </span>
+                    <span className="flex-grow">{notification.message}</span>
+                    <button
+                      className="text-gray-500 hover:text-gray-700 text-xl font-bold cursor-pointer"
+                      onClick={() => setNotification({type: null, message: ''})}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {notification.type === 'success' && pdfUrl && (
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        onClick={handlePreviewPdf}
+                        className="py-1.5 px-3 bg-[#6c5ce7] text-white text-sm rounded-md font-medium hover:bg-[#5a4ecc] transition-colors"
+                      >
+                        View PDF
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

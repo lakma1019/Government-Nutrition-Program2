@@ -15,19 +15,19 @@ export default function AboutPage() {
       name: 'Dr. Samantha Perera',
       role: 'Program Director',
       description: 'Leading the nutrition program with over 15 years of experience in public health initiatives.',
-      image: '/images/home_page/middle_images/image10.jpg'
+      image: '/images/home_page/middle_images/Dr.SamanthaPerera.jpg'
     },
     {
       name: 'Nimal Jayawardena',
       role: 'Operations Manager',
       description: 'Ensuring smooth day-to-day operations of the food supply chain across all participating schools.',
-      image: '/images/home_page/middle_images/image11.jpg'
+      image: '/images/home_page/middle_images/Nimal_Jayawardena.jpeg'
     },
     {
       name: 'Kumari Silva',
       role: 'Nutritionist',
       description: 'Developing balanced meal plans that meet the nutritional needs of growing children.',
-      image: '/images/home_page/middle_images/image12.jpg'
+      image: '/images/home_page/middle_images/Kumari_Silva.jpg'
     }
   ];
 
@@ -88,7 +88,7 @@ export default function AboutPage() {
           alt="Government Food Supply Process Management System"
           fill
           priority
-          className="object-cover z-0"
+          className="absolute inset-0 bg-black bg-opacity-50 z-10 object-cover"
         />
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
         <div className="relative z-10 flex flex-col items-center justify-center text-center text-white h-full px-8">
@@ -258,7 +258,7 @@ export default function AboutPage() {
                       alt={member.name}
                       width={200}
                       height={200}
-                      className="rounded-full object-cover mx-auto" // mx-auto for centering image if its div is wider
+                      className="rounded-full object-cover" // mx-auto for centering image if its div is wider
                     />
                   </div>
                   <h3 className="my-2 text-blue-800 text-xl font-semibold">{member.name}</h3>

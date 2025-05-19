@@ -4,9 +4,19 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+interface UrlData {
+  downloadURL: string;
+  fileName?: string;
+  filePath?: string;
+  contentType?: string;
+  size?: number;
+  uploadTime?: string;
+}
+
 interface Voucher {
   id: number;
-  file_path: string;
+  url_data: UrlData | string;
+  file_path?: string; // For backward compatibility
   deo_id: number;
   vo_id: number;
   status: 'pending' | 'approved' | 'rejected';
@@ -27,6 +37,10 @@ export default function VOVoucherPage() {
   const [comment, setComment] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const pathname = usePathname();
+
+  // PDF Preview state variables
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Fetch vouchers on component mount
   useEffect(() => {
@@ -82,7 +96,33 @@ export default function VOVoucherPage() {
     // Reset form when selecting a new voucher
     setVerificationStatus('approved');
     setComment('');
+
+    // If the voucher has url_data with downloadURL, set it for preview
+    if (voucher.url_data) {
+      let urlData: UrlData;
+      if (typeof voucher.url_data === 'string') {
+        try {
+          urlData = JSON.parse(voucher.url_data);
+        } catch (e) {
+          console.error('Error parsing URL data:', e);
+          urlData = { downloadURL: voucher.url_data };
+        }
+      } else {
+        urlData = voucher.url_data;
+      }
+
+      if (urlData.downloadURL) {
+        setPreviewUrl(urlData.downloadURL);
+      } else if (voucher.file_path) {
+        // Fallback to file_path for backward compatibility
+        setPreviewUrl(voucher.file_path);
+      }
+    } else if (voucher.file_path) {
+      setPreviewUrl(voucher.file_path);
+    }
   };
+
+
 
   const handleVerifyVoucher = async () => {
     if (!selectedVoucher) return;
@@ -192,6 +232,8 @@ export default function VOVoucherPage() {
 
   return (
     <div className={containerClasses}>
+      {/* Add animation styles */}
+      <style jsx>{styles}</style>
       {/* Navigation Bar */}
       <nav className={navbarClasses}>
         <div className={brandClasses}>Government Nutrition Program</div>
@@ -244,8 +286,30 @@ export default function VOVoucherPage() {
                       <div className="text-sm text-gray-600 mb-1">
                         From: {voucher.deo_full_name || voucher.deo_username || 'Unknown DEO'}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {formatDate(voucher.created_at)}
+                      <div className="flex justify-between items-center">
+                        <div className="text-xs text-gray-500">
+                          {formatDate(voucher.created_at)}
+                        </div>
+
+                        {/* Quick Preview Button */}
+                        {(voucher.url_data || voucher.file_path) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent triggering the parent onClick
+
+                              // Set the selected voucher first
+                              handleViewVoucher(voucher);
+
+                              // Then open the preview modal
+                              setTimeout(() => {
+                                setShowPreviewModal(true);
+                              }, 100);
+                            }}
+                            className="text-xs px-2 py-1 bg-[#6c5ce7] text-white rounded hover:bg-[#5a4ecc] transition-colors"
+                          >
+                            Preview
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -277,8 +341,30 @@ export default function VOVoucherPage() {
                         <p className="font-medium">{formatDate(selectedVoucher.created_at)}</p>
                       </div>
                       <div className="col-span-2">
-                        <p className="text-sm text-gray-500">File Path</p>
-                        <p className="font-medium break-all">{selectedVoucher.file_path}</p>
+                        <p className="text-sm text-gray-500">File Information</p>
+                        {previewUrl ? (
+                          <div>
+                            <p className="font-medium break-all mb-1">
+                              {typeof selectedVoucher.url_data === 'object' && selectedVoucher.url_data.fileName ? (
+                                <>File Name: {selectedVoucher.url_data.fileName}</>
+                              ) : (
+                                <>Download URL: {previewUrl}</>
+                              )}
+                            </p>
+                            {typeof selectedVoucher.url_data === 'object' && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {selectedVoucher.url_data.uploadTime && (
+                                  <p>Uploaded: {new Date(selectedVoucher.url_data.uploadTime).toLocaleString()}</p>
+                                )}
+                                {selectedVoucher.url_data.size && (
+                                  <p>Size: {Math.round(selectedVoucher.url_data.size / 1024)} KB</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="font-medium break-all">{selectedVoucher.file_path || 'No file information available'}</p>
+                        )}
                       </div>
                       {selectedVoucher.comment && (
                         <div className="col-span-2">
@@ -288,12 +374,36 @@ export default function VOVoucherPage() {
                       )}
                     </div>
 
-                    {/* Voucher Preview (placeholder) */}
-                    <div className="border rounded-lg p-4 mb-6 bg-gray-50 text-center">
-                      <p className="text-gray-500 mb-2">Voucher Preview</p>
-                      <p className="text-sm text-gray-400">
-                        (In a real implementation, this would display the actual voucher PDF)
-                      </p>
+                    {/* Voucher Preview */}
+                    <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+                      <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-md font-semibold">Voucher Preview</h3>
+                        {previewUrl && (
+                          <button
+                            onClick={() => setShowPreviewModal(true)}
+                            className="px-3 py-1.5 bg-[#6c5ce7] text-white rounded-md text-sm font-medium hover:bg-[#5a4ecc] transition-colors"
+                          >
+                            Open PDF Preview
+                          </button>
+                        )}
+                      </div>
+
+                      {previewUrl ? (
+                        <div className="h-64 border rounded overflow-hidden bg-white">
+                          <iframe
+                            src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                            className="w-full h-full border-none"
+                            title="Voucher PDF Preview"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <p className="text-gray-500 mb-2">No PDF available for preview</p>
+                          <p className="text-sm text-gray-400">
+                            The voucher does not have an associated PDF file
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Verification Form */}
@@ -398,6 +508,67 @@ export default function VOVoucherPage() {
           </div>
         </div>
       </div>
+
+      {/* PDF Preview Modal */}
+      {showPreviewModal && previewUrl && (
+        <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-xl w-11/12 max-w-[90%] h-[90vh] overflow-hidden shadow-xl animate-modalSlideIn border border-gray-100 flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
+              <h2 className="m-0 text-[#6c5ce7] text-xl font-bold">Voucher PDF Preview</h2>
+              <button
+                className="bg-none border-none text-2xl cursor-pointer text-gray-600 transition-colors duration-300 w-10 h-10 flex items-center justify-center rounded-full hover:text-red-600 hover:bg-gray-100"
+                onClick={() => setShowPreviewModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={`${previewUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                className="w-full h-full border-none"
+                title="Voucher PDF Preview"
+              />
+            </div>
+            <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between">
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="py-2 px-4 bg-gray-200 text-gray-700 rounded-md font-medium hover:bg-gray-300 transition-colors"
+              >
+                Close
+              </button>
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2 px-4 bg-[#6c5ce7] text-white rounded-md font-medium hover:bg-[#5a4ecc] transition-colors"
+              >
+                Open in New Tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Add keyframe animations for modal
+const styles = `
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-modalSlideIn {
+  animation: modalSlideIn 0.3s ease-out forwards;
+}
+`;

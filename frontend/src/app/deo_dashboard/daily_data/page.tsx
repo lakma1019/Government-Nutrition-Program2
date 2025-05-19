@@ -203,8 +203,11 @@ export default function DailyDataManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.date || formData.meal_recipe.trim() === '') {
-      showNotification('error', 'Date and Meal Recipe are required.');
+    // Ensure date is always set to today's date
+    const todayDate = new Date().toISOString().split('T')[0];
+
+    if (formData.meal_recipe.trim() === '') {
+      showNotification('error', 'Meal Recipe is required.');
       return;
     }
     if ((parseInt(formData.female) || 0) < 0 || (parseInt(formData.male) || 0) < 0) {
@@ -222,7 +225,7 @@ export default function DailyDataManagement() {
 
 
     const entryPayload: Omit<DailyData, 'id' | 'created_at' | 'updated_at'> = {
-      date: formData.date,
+      date: todayDate, // Always use today's date
       female: parseInt(formData.female) || 0,
       male: parseInt(formData.male) || 0,
       total: calculatedTotal,
@@ -286,7 +289,7 @@ export default function DailyDataManagement() {
   const handleEdit = (entry: DailyData) => {
     setCurrentEntry(entry);
     setFormData({
-      date: entry.date,
+      date: new Date().toISOString().split('T')[0], // Always use current date even when editing
       female: String(entry.female),
       male: String(entry.male),
       unit_price: String(entry.unit_price.toFixed(2)),
@@ -357,7 +360,6 @@ export default function DailyDataManagement() {
   const navLinksClasses = "flex space-x-4";
   const navLinkBaseClasses = "inline-flex group";
   const linkTextBaseClasses = "inline-block py-1.5 px-4 bg-white rounded-full text-black text-sm font-bold transition-all duration-200 ease-in-out";
-  const linkTextHoverClasses = "group-hover:bg-[#f0e0f0]";
   const linkTextHighlightClasses = "bg-[#f0e0f0] border-2 border-[#d070d0] !text-black";
   const mainContentClasses = "flex-1 p-8 max-w-screen-xl mx-auto w-full";
   const pageHeaderClasses = "mb-8";
@@ -484,8 +486,15 @@ export default function DailyDataManagement() {
             <form className={dataFormClasses} onSubmit={handleSubmit}>
               <div className={formRowClasses}>
                 <div className={formGroupClasses}>
-                  <label htmlFor="date" className={formLabelClasses}>Date*</label>
-                  <input type="date" id="date" name="date" value={formData.date} onChange={handleInputChange} required className={formInputBaseClasses} />
+                  <label htmlFor="date" className={formLabelClasses}>Date* <span className="text-xs text-gray-500">(Today's date is automatically set)</span></label>
+                  <input
+                    type="date"
+                    id="date"
+                    name="date"
+                    value={formData.date}
+                    readOnly
+                    className={`${formInputBaseClasses} bg-gray-100 cursor-not-allowed`}
+                  />
                 </div>
                 <div className={formGroupClasses}>
                     <label htmlFor="method_of_rice_received" className={formLabelClasses}>Method of Rice Received*</label>

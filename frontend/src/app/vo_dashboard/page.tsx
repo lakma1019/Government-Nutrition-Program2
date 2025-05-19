@@ -26,38 +26,13 @@ export default function VerificationOfficerDashboard() {
       setLoading(false)
     }, 500)
 
-    // --- Begin Example Authentication Check ---
-    // This is a placeholder. Replace with your actual authentication logic.
-    // try {
-    //   const storedUser = localStorage.getItem('user');
-    //   if (!storedUser) {
-    //     router.push('/login');
-    //     console.error("No user found, redirecting to login.");
-    //     return;
-    //   }
-    //   const userData = JSON.parse(storedUser);
-    //   if (userData.role !== 'verificationOfficer') {
-    //     alert('Access Denied. Only Verification Officers can access this page.');
-    //     router.push('/');
-    //     console.error("User role not verificationOfficer, access denied.");
-    //     return;
-    //   }
-    //   setUser(userData);
-    // } catch (error) {
-    //   console.error("Authentication error:", error);
-    //   router.push('/login');
-    // } finally {
-    //   setLoading(false);
-    // }
-    // --- End Example Authentication Check ---
-
     return () => clearTimeout(timer)
   }, [])
 
   // Card data with improved structure
   const cardData = [
     {
-      title: "Profile",
+      title: "View Profile",
       description: "View and manage your user profile and account settings",
       icon: <UserCircle className="h-12 w-12" />,
       href: "/vo_dashboard/profile",

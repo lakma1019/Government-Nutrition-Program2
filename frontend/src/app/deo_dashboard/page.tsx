@@ -97,9 +97,8 @@ export default function DataEntryOfficerDashboard() {
     { title: "Supporters", icon: "🤝", href: "/deo_dashboard/supporters", ariaLabel: "Manage Supporters" },
     { title: "Progress Report", icon: "📈", href: "/deo_dashboard/progress_report", ariaLabel: "Generate Progress Report" },
     { title: "Voucher", icon: "📄", href: "/deo_dashboard/voucher", ariaLabel: "Generate Voucher" },
-    { title: "Reports", icon: "📊", href: "/deo_dashboard/reports", ariaLabel: "View Reports" },
-    { title: "History", icon: "📜", href: "/deo_dashboard/history", ariaLabel: "View History" },
-    { title: "Profile", icon: "👤", href: "/deo_dashboard/profile", ariaLabel: "View Profile" },
+    { title: "Voucher History", icon: "📜", href: "/deo_dashboard/history", ariaLabel: "Voucher History" },
+    { title: "View Profile", icon: "👤", href: "/deo_dashboard/profile", ariaLabel: "View Profile" },
   ];
 
   return (

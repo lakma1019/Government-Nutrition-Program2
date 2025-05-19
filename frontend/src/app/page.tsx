@@ -146,7 +146,7 @@ export default function HomePage() {
           {/* Our Programs Section */}
           <section className="mb-24" aria-labelledby="programs-heading">
             <h2 id="programs-heading" className="text-2xl md:text-3xl font-bold text-green-700 mb-8 text-center">
-              Our Programs
+              Our Programme
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {[1, 2, 3, 4].map((i) => (
